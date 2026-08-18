@@ -1,0 +1,72 @@
+meta {
+  name: Simulate Inbound Patient Message
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/webhook
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  const crypto = require('crypto');
+  const secret = bru.getEnvVar('whatsappAppSecret');
+  const rawBody = req.getBody();
+  const bodyStr = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
+  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+  req.setHeader('X-Hub-Signature-256', signature);
+}
+
+body:json {
+  {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "WABA_ID",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "+15550001111",
+                "phone_number_id": "{{tenantPhoneNumberId}}"
+              },
+              "contacts": [
+                { "profile": { "name": "Test Patient" }, "wa_id": "{{patientPhone}}" }
+              ],
+              "messages": [
+                {
+                  "from": "{{patientPhone}}",
+                  "id": "wamid.bruno-patient-1",
+                  "timestamp": "1690000000",
+                  "type": "text",
+                  "text": { "body": "Hi" }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+docs {
+  Simulates Meta delivering an inbound patient text message. The
+  pre-request script computes X-Hub-Signature-256 over this exact JSON body
+  using whatsappAppSecret (must match WHATSAPP_APP_SECRET in your .env) —
+  edit the body and the signature recomputes automatically on send.
+
+  First contact from an unknown number auto-registers as a patient and
+  starts the booking bot (replies with the language-selection prompt).
+  wa_message_id ("wamid.bruno-patient-1") must be unique per send — Meta
+  redelivery is deduped by this id, so re-sending the same id won't
+  reprocess it; change it (or the whole body) to continue the flow with the
+  next step's reply (e.g. "1" for English).
+
+  Requires the dev server + Postgres + Redis running and seed data loaded
+  (npm run db:seed).
+}

@@ -1,0 +1,56 @@
+meta {
+  name: Simulate Status Update
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/webhook
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  const crypto = require('crypto');
+  const secret = bru.getEnvVar('whatsappAppSecret');
+  const bodyStr = JSON.stringify(req.getBody());
+  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+  req.setHeader('X-Hub-Signature-256', signature);
+}
+
+body:json {
+  {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "WABA_ID",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "+15550001111",
+                "phone_number_id": "{{tenantPhoneNumberId}}"
+              },
+              "statuses": [
+                {
+                  "id": "wamid.some-outbound-message-id",
+                  "status": "delivered",
+                  "timestamp": "1690000000"
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+docs {
+  Simulates a delivery-status callback (sent/delivered/read/failed) for a
+  previously sent outbound message. Replace "id" with the real
+  wa_message_id of an existing row in `messages` to see its `status` column
+  get updated — an id with no match is a no-op update (still 200).
+}

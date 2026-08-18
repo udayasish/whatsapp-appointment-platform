@@ -1,0 +1,64 @@
+meta {
+  name: Simulate Inbound Staff Command
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/webhook
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  const crypto = require('crypto');
+  const secret = bru.getEnvVar('whatsappAppSecret');
+  const bodyStr = JSON.stringify(req.getBody());
+  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+  req.setHeader('X-Hub-Signature-256', signature);
+}
+
+body:json {
+  {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "WABA_ID",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "+15550001111",
+                "phone_number_id": "{{tenantPhoneNumberId}}"
+              },
+              "messages": [
+                {
+                  "from": "{{receptionistPhone}}",
+                  "id": "wamid.bruno-staff-1",
+                  "timestamp": "1690000000",
+                  "type": "text",
+                  "text": { "body": "TODAY" }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+docs {
+  Simulates a receptionist/doctor sending a staff command. receptionistPhone
+  and doctorPhone (see the environment) must already exist in `users` with
+  role receptionist/doctor for the tenant — the seed script creates both.
+
+  Swap the message body text to try other commands:
+  DONE <token>, NOSHOW <token>, CANCEL <token> <reason>,
+  BLOCK <doctor name> <date YYYY-MM-DD>,
+  SLOT <doctor name> <MON,WED,FRI> <09:00> <13:00> <15>
+
+  Change wa_message_id per send (Meta redelivery is deduped by id).
+}

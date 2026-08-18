@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — ClinicConnect</title>
+<style>
+  :root {
+    --ink: #1c2530;
+    --muted: #5b6b7a;
+    --line: #e2e8ef;
+    --bg: #ffffff;
+    --panel: #f4f8fb;
+    --accent: #0f766e;
+    --accent-soft: #e6f4f2;
+    --danger: #b3261e;
+    --max: 640px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8edf2;
+      --muted: #9aa8b4;
+      --line: #2b3742;
+      --bg: #10161c;
+      --panel: #171f27;
+      --accent: #35c9b8;
+      --accent-soft: #102b28;
+      --danger: #ff6b61;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 28px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 1rem;
+  }
+  button {
+    margin-top: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  button.secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  .error {
+    color: var(--danger);
+    font-size: 0.88rem;
+    margin-top: 10px;
+    min-height: 1.2em;
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.92rem;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:last-child td { border-bottom: none; }
+  .toggle {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    vertical-align: middle;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--line);
+    border-radius: 999px;
+    transition: 0.15s;
+  }
+  .slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.15s;
+  }
+  .toggle input:checked + .slider { background: var(--accent); }
+  .toggle input:checked + .slider::before { transform: translateX(18px); }
+  .toggle input:disabled + .slider { opacity: 0.5; cursor: default; }
+  .status {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+    min-height: 1em;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="login-view">
+    <h1>ClinicConnect Admin</h1>
+    <p class="sub">Sign in to manage per-clinic settings.</p>
+    <div class="card">
+      <form id="login-form">
+        <label for="password">Admin password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required />
+        <div class="error" id="login-error"></div>
+        <button type="submit" id="login-btn">Sign in</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="dashboard-view" class="hidden">
+    <div class="topbar">
+      <div>
+        <h1>Clinics</h1>
+        <p class="sub" style="margin:0">Toggle proactive WhatsApp messages per clinic.</p>
+      </div>
+      <button class="secondary" id="logout-btn">Sign out</button>
+    </div>
+    <div class="card" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>Clinic</th>
+            <th>Reminders</th>
+            <th>Notifications</th>
+          </tr>
+        </thead>
+        <tbody id="tenant-rows"></tbody>
+      </table>
+    </div>
+    <div class="error" id="dashboard-error"></div>
+  </section>
+
+</div>
+
+<script>
+  const loginView = document.getElementById("login-view");
+  const dashboardView = document.getElementById("dashboard-view");
+  const loginForm = document.getElementById("login-form");
+  const loginError = document.getElementById("login-error");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const tenantRows = document.getElementById("tenant-rows");
+  const dashboardError = document.getElementById("dashboard-error");
+
+  function showLogin() {
+    loginView.classList.remove("hidden");
+    dashboardView.classList.add("hidden");
+  }
+
+  function showDashboard() {
+    loginView.classList.add("hidden");
+    dashboardView.classList.remove("hidden");
+  }
+
+  function toggleCell(tenant, field) {
+    const id = `${field}-${tenant.id}`;
+    return `
+      <label class="toggle">
+        <input type="checkbox" id="${id}" data-tenant="${tenant.id}" data-field="${field}" ${tenant[field] ? "checked" : ""} />
+        <span class="slider"></span>
+      </label>
+      <div class="status" id="status-${id}"></div>
+    `;
+  }
+
+  function renderTenants(tenants) {
+    tenantRows.innerHTML = tenants
+      .map(
+        (t) => `
+        <tr>
+          <td>${t.name}</td>
+          <td>${toggleCell(t, "remindersEnabled")}</td>
+          <td>${toggleCell(t, "notificationsEnabled")}</td>
+        </tr>
+      `
+      )
+      .join("");
+
+    tenantRows.querySelectorAll('input[type="checkbox"]').forEach((el) => {
+      el.addEventListener("change", onToggle);
+    });
+  }
+
+  async function onToggle(e) {
+    const el = e.target;
+    const tenantId = el.dataset.tenant;
+    const field = el.dataset.field;
+    const statusEl = document.getElementById(`status-${field}-${tenantId}`);
+    el.disabled = true;
+    statusEl.textContent = "Saving…";
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenantId}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ [field]: el.checked }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
+      statusEl.textContent = "Saved";
+      setTimeout(() => { if (statusEl.textContent === "Saved") statusEl.textContent = ""; }, 1500);
+    } catch (err) {
+      el.checked = !el.checked;
+      statusEl.textContent = err.message || "Failed to save";
+    } finally {
+      el.disabled = false;
+    }
+  }
+
+  async function loadTenants() {
+    dashboardError.textContent = "";
+    const res = await fetch("/api/admin/tenants", { credentials: "include" });
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+    if (!res.ok) {
+      dashboardError.textContent = "Failed to load clinics.";
+      return;
+    }
+    const tenants = await res.json();
+    renderTenants(tenants);
+    showDashboard();
+  }
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError.textContent = "";
+    loginBtn.disabled = true;
+    const password = document.getElementById("password").value;
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Login failed");
+      }
+      document.getElementById("password").value = "";
+      await loadTenants();
+    } catch (err) {
+      loginError.textContent = err.message;
+    } finally {
+      loginBtn.disabled = false;
+    }
+  });
+
+  logoutBtn.addEventListener("click", async () => {
+    await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
+    showLogin();
+  });
+
+  loadTenants();
+</script>
+</body>
+</html>

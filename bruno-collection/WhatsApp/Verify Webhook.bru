@@ -1,0 +1,18 @@
+meta {
+  name: Verify Webhook
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/webhook?hub.mode=subscribe&hub.verify_token={{verifyToken}}&hub.challenge=CHALLENGE_ACCEPTED
+  body: none
+  auth: none
+}
+
+docs {
+  Meta's webhook verification handshake (run once, when configuring the
+  webhook URL in the Meta App Dashboard). Returns the challenge string as
+  plain text with a 200 when hub.verify_token matches
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN; 403 on a wrong/missing token.
+}

@@ -1,0 +1,69 @@
+meta {
+  name: Simulate Report Upload
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/webhook
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  const crypto = require('crypto');
+  const secret = bru.getEnvVar('whatsappAppSecret');
+  const bodyStr = JSON.stringify(req.getBody());
+  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+  req.setHeader('X-Hub-Signature-256', signature);
+}
+
+body:json {
+  {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "WABA_ID",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "+15550001111",
+                "phone_number_id": "{{tenantPhoneNumberId}}"
+              },
+              "messages": [
+                {
+                  "from": "{{receptionistPhone}}",
+                  "id": "wamid.bruno-report-1",
+                  "timestamp": "1690000000",
+                  "type": "document",
+                  "document": {
+                    "id": "wamid-media-bruno-test",
+                    "filename": "report.pdf",
+                    "caption": "REPORT {{patientPhone}}"
+                  }
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+docs {
+  Simulates a receptionist/doctor attaching a PDF with caption
+  "REPORT <phone_number>" — the trigger for report delivery (Phase 5). The
+  "document.id" here stands in for the real WhatsApp media id Meta would
+  assign to the uploaded file; report-worker re-sends by that same id, so
+  in this simulation the outbound send to the patient will fail unless a
+  real (or mocked) Graph API can resolve it — the `reports` row and queued
+  job are still created and observable regardless.
+
+  patientPhone must already exist as a patient `users` row for this to
+  resolve (book an appointment via the booking bot first, or insert one
+  directly).
+}
