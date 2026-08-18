@@ -3,6 +3,7 @@ import session from "express-session";
 import { errorHandler, notFoundHandler } from "./middlewares/index.js";
 import { whatsappRouter } from "./components/whatsapp/routes.js";
 import { adminRouter, sessionStore } from "./components/admin/index.js";
+import { qrRouter } from "./components/qr/index.js";
 import { env } from "./lib/env.js";
 
 export const app = express();
@@ -41,6 +42,7 @@ app.use(
   adminRouter
 );
 
+app.use("/qr", qrRouter);
 app.use(whatsappRouter);
 
 app.use(notFoundHandler);

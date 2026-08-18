@@ -1,0 +1,15 @@
+meta {
+  name: Get QR Image PNG
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/qr/{{tenantId}}/image?format=png&size=600
+  body: none
+  auth: none
+}
+
+docs {
+  Streams the raw PNG QR code image directly with Content-Type: image/png.
+}

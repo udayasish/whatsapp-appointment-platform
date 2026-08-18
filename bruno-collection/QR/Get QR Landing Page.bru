@@ -1,0 +1,15 @@
+meta {
+  name: Get QR Landing Page
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/qr/{{tenantId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Renders the web preview and click-to-chat landing page for the clinic QR code.
+}

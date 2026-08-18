@@ -1,0 +1,15 @@
+meta {
+  name: Get Tenants with QR
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/admin/tenants
+  body: none
+  auth: none
+}
+
+docs {
+  Returns all clinics with their settings, WhatsApp phone numbers, wa.me Click-to-Chat deep links, and QR poster links. Requires active admin session.
+}

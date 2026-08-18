@@ -1,0 +1,15 @@
+meta {
+  name: Admin Download Tenant QR
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/admin/tenants/{{tenantId}}/qr/download?format=png&size=2048
+  body: none
+  auth: none
+}
+
+docs {
+  Downloads high-resolution PNG or SVG QR code for a clinic through the admin endpoint. Requires active admin session.
+}

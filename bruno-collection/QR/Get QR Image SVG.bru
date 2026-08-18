@@ -1,0 +1,15 @@
+meta {
+  name: Get QR Image SVG
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/qr/{{tenantId}}/image?format=svg
+  body: none
+  auth: none
+}
+
+docs {
+  Streams the vector SVG QR code with Content-Type: image/svg+xml.
+}

@@ -6,6 +6,8 @@ import { db, tenants } from "../../lib/db/index.js";
 import { env } from "../../lib/env.js";
 import { requireAdminSession } from "./middleware.js";
 import { loginRateLimit } from "./login-rate-limit.js";
+import { generateWaMeLink, sanitizePhoneNumber } from "../../common/wa-link.js";
+import { getClinicQrInfo, generateQrPngBuffer, generateQrSvg } from "../qr/index.js";
 
 export const adminRouter = Router();
 
@@ -42,9 +44,59 @@ adminRouter.get("/tenants", requireAdminSession, async (_req, res) => {
       status: true,
       remindersEnabled: true,
       notificationsEnabled: true,
+      whatsappDisplayNumber: true,
+      whatsappPhoneNumberId: true,
     },
   });
-  res.json(rows);
+
+  const withQr = rows.map((r) => {
+    const cleanPhone = sanitizePhoneNumber(r.whatsappDisplayNumber);
+    const waMeUrl = generateWaMeLink({ phone: cleanPhone, text: "Hi" });
+    return {
+      ...r,
+      cleanPhone,
+      waMeUrl,
+      posterUrl: `/qr/${r.id}/poster`,
+      imageUrl: `/qr/${r.id}/image`,
+    };
+  });
+
+  res.json(withQr);
+});
+
+adminRouter.get("/tenants/:id/qr", requireAdminSession, async (req, res) => {
+  const info = await getClinicQrInfo(String(req.params.id));
+  if (!info) {
+    res.status(404).json({ error: "Tenant not found" });
+    return;
+  }
+  res.json(info);
+});
+
+adminRouter.get("/tenants/:id/qr/download", requireAdminSession, async (req, res) => {
+  const info = await getClinicQrInfo(String(req.params.id));
+  if (!info) {
+    res.status(404).json({ error: "Tenant not found" });
+    return;
+  }
+
+  const format = req.query.format === "svg" ? "svg" : "png";
+  const size = Math.min(Math.max(Number(req.query.size) || 1600, 100), 4000);
+  const slug = info.clinicName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const filename = `${slug}-whatsapp-qr.${format}`;
+
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  if (format === "svg") {
+    const svg = await generateQrSvg(info.waMeUrl, { width: size });
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.send(svg);
+    return;
+  }
+
+  const pngBuffer = await generateQrPngBuffer(info.waMeUrl, { width: size });
+  res.setHeader("Content-Type", "image/png");
+  res.send(pngBuffer);
 });
 
 const settingsSchema = z

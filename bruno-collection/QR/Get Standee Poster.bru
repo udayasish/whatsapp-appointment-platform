@@ -1,0 +1,15 @@
+meta {
+  name: Get Standee Poster
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/qr/{{tenantId}}/poster
+  body: none
+  auth: none
+}
+
+docs {
+  Renders the print-ready A4/countertop standee flyer HTML page.
+}

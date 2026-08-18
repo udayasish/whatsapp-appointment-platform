@@ -1,0 +1,21 @@
+meta {
+  name: Admin Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/admin/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "password": "changeme"
+  }
+}
+
+docs {
+  Logs into the admin session. Replace password with the configured admin password.
+}

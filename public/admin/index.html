@@ -12,9 +12,11 @@
     --bg: #ffffff;
     --panel: #f4f8fb;
     --accent: #0f766e;
+    --accent-hover: #0d655e;
     --accent-soft: #e6f4f2;
     --danger: #b3261e;
-    --max: 640px;
+    --wa-green: #25D366;
+    --max: 760px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -24,6 +26,7 @@
       --bg: #10161c;
       --panel: #171f27;
       --accent: #35c9b8;
+      --accent-hover: #2cb3a3;
       --accent-soft: #102b28;
       --danger: #ff6b61;
     }
@@ -62,30 +65,48 @@
     color: var(--muted);
     margin-bottom: 6px;
   }
-  input[type="password"] {
+  input[type="password"], input[type="text"] {
     width: 100%;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid var(--line);
     background: var(--bg);
     color: var(--ink);
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
-  button {
+  button, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     margin-top: 16px;
     background: var(--accent);
     color: #fff;
     border: none;
-    padding: 10px 18px;
+    padding: 9px 16px;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+    font-weight: 600;
     cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease;
   }
-  button:disabled { opacity: 0.6; cursor: default; }
-  button.secondary {
+  button:hover, .btn:hover { background: var(--accent-hover); }
+  button:disabled, .btn:disabled { opacity: 0.6; cursor: default; }
+  button.secondary, .btn.secondary {
     background: transparent;
     color: var(--muted);
     border: 1px solid var(--line);
+  }
+  button.secondary:hover, .btn.secondary:hover {
+    background: var(--line);
+    color: var(--ink);
+  }
+  button.sm, .btn.sm {
+    margin-top: 0;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    border-radius: 6px;
   }
   .error {
     color: var(--danger);
@@ -107,15 +128,18 @@
     text-align: left;
     padding: 12px 10px;
     border-bottom: 1px solid var(--line);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+    vertical-align: middle;
   }
-  th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
   tr:last-child td { border-bottom: none; }
+  .clinic-name { font-weight: 600; }
+  .clinic-phone { font-size: 0.8rem; color: var(--muted); }
   .toggle {
     position: relative;
     display: inline-block;
-    width: 42px;
-    height: 24px;
+    width: 38px;
+    height: 22px;
     vertical-align: middle;
   }
   .toggle input { opacity: 0; width: 0; height: 0; }
@@ -130,8 +154,8 @@
   .slider::before {
     content: "";
     position: absolute;
-    height: 18px;
-    width: 18px;
+    height: 16px;
+    width: 16px;
     left: 3px;
     top: 3px;
     background: white;
@@ -139,15 +163,86 @@
     transition: 0.15s;
   }
   .toggle input:checked + .slider { background: var(--accent); }
-  .toggle input:checked + .slider::before { transform: translateX(18px); }
+  .toggle input:checked + .slider::before { transform: translateX(16px); }
   .toggle input:disabled + .slider { opacity: 0.5; cursor: default; }
   .status {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--muted);
     margin-top: 2px;
     min-height: 1em;
   }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
+
+  /* Modal styling */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+  }
+  .modal-content {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 480px;
+    padding: 28px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+    position: relative;
+    text-align: center;
+  }
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 4px 8px;
+    margin: 0;
+  }
+  .qr-preview-box {
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    display: inline-block;
+    margin: 16px 0;
+  }
+  .qr-preview-img {
+    width: 200px;
+    height: 200px;
+    display: block;
+    margin: 0 auto;
+  }
+  .copy-row {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 20px;
+  }
+  .copy-row input {
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+  .copy-row button {
+    margin: 0;
+    white-space: nowrap;
+  }
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .modal-actions .btn-full {
+    grid-column: span 2;
+  }
 </style>
 </head>
 <body>
@@ -155,7 +250,7 @@
 
   <section id="login-view">
     <h1>ClinicConnect Admin</h1>
-    <p class="sub">Sign in to manage per-clinic settings.</p>
+    <p class="sub">Sign in to manage per-clinic settings and QR codes.</p>
     <div class="card">
       <form id="login-form">
         <label for="password">Admin password</label>
@@ -169,18 +264,19 @@
   <section id="dashboard-view" class="hidden">
     <div class="topbar">
       <div>
-        <h1>Clinics</h1>
-        <p class="sub" style="margin:0">Toggle proactive WhatsApp messages per clinic.</p>
+        <h1>Clinics &amp; QR Codes</h1>
+        <p class="sub" style="margin:0">Manage WhatsApp booking QR codes and settings per clinic.</p>
       </div>
-      <button class="secondary" id="logout-btn">Sign out</button>
+      <button class="secondary sm" id="logout-btn">Sign out</button>
     </div>
     <div class="card" style="padding:0">
       <table>
         <thead>
           <tr>
             <th>Clinic</th>
+            <th>QR Code</th>
             <th>Reminders</th>
-            <th>Notifications</th>
+            <th>Alerts</th>
           </tr>
         </thead>
         <tbody id="tenant-rows"></tbody>
@@ -189,6 +285,37 @@
     <div class="error" id="dashboard-error"></div>
   </section>
 
+</div>
+
+<!-- QR Code Modal -->
+<div id="qr-modal" class="modal-backdrop hidden">
+  <div class="modal-content">
+    <button class="modal-close" id="modal-close-btn" aria-label="Close">&times;</button>
+    <h2 id="modal-clinic-name" style="margin:0 0 4px; font-size:1.3rem;">Sunrise Clinic</h2>
+    <p class="sub" style="margin:0;" id="modal-clinic-phone">+1 (555) 000-1111</p>
+
+    <div class="qr-preview-box">
+      <img id="modal-qr-img" src="" alt="WhatsApp Booking QR Code" class="qr-preview-img" />
+    </div>
+
+    <label style="text-align:left; font-size:0.8rem;">WhatsApp Deep Link (Scan or Click)</label>
+    <div class="copy-row">
+      <input type="text" id="modal-wa-link" readonly />
+      <button type="button" class="sm secondary" id="copy-link-btn">Copy</button>
+    </div>
+
+    <div class="modal-actions">
+      <a id="download-png-btn" class="btn sm secondary" href="#" download>
+        ⬇️ Download PNG
+      </a>
+      <a id="download-svg-btn" class="btn sm secondary" href="#" download>
+        ⬇️ Download SVG
+      </a>
+      <a id="print-standee-btn" class="btn sm btn-full" href="#" target="_blank">
+        🖨️ Print Counter Standee / Poster
+      </a>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -200,6 +327,20 @@
   const logoutBtn = document.getElementById("logout-btn");
   const tenantRows = document.getElementById("tenant-rows");
   const dashboardError = document.getElementById("dashboard-error");
+
+  // Modal elements
+  const qrModal = document.getElementById("qr-modal");
+  const modalCloseBtn = document.getElementById("modal-close-btn");
+  const modalClinicName = document.getElementById("modal-clinic-name");
+  const modalClinicPhone = document.getElementById("modal-clinic-phone");
+  const modalQrImg = document.getElementById("modal-qr-img");
+  const modalWaLink = document.getElementById("modal-wa-link");
+  const copyLinkBtn = document.getElementById("copy-link-btn");
+  const downloadPngBtn = document.getElementById("download-png-btn");
+  const downloadSvgBtn = document.getElementById("download-svg-btn");
+  const printStandeeBtn = document.getElementById("print-standee-btn");
+
+  let currentTenants = [];
 
   function showLogin() {
     loginView.classList.remove("hidden");
@@ -223,11 +364,20 @@
   }
 
   function renderTenants(tenants) {
+    currentTenants = tenants;
     tenantRows.innerHTML = tenants
       .map(
         (t) => `
         <tr>
-          <td>${t.name}</td>
+          <td>
+            <div class="clinic-name">${t.name}</div>
+            <div class="clinic-phone">${t.whatsappDisplayNumber}</div>
+          </td>
+          <td>
+            <button class="sm" onclick="openQrModal('${t.id}')">
+              📱 View QR
+            </button>
+          </td>
           <td>${toggleCell(t, "remindersEnabled")}</td>
           <td>${toggleCell(t, "notificationsEnabled")}</td>
         </tr>
@@ -239,6 +389,44 @@
       el.addEventListener("change", onToggle);
     });
   }
+
+  window.openQrModal = async function(tenantId) {
+    const tenant = currentTenants.find((t) => t.id === tenantId);
+    if (!tenant) return;
+
+    modalClinicName.textContent = tenant.name;
+    modalClinicPhone.textContent = `WhatsApp: ${tenant.whatsappDisplayNumber}`;
+    modalWaLink.value = tenant.waMeUrl;
+    modalQrImg.src = `/qr/${tenant.id}/image?size=600&t=${Date.now()}`;
+    
+    downloadPngBtn.href = `/api/admin/tenants/${tenant.id}/qr/download?format=png&size=2048`;
+    downloadSvgBtn.href = `/api/admin/tenants/${tenant.id}/qr/download?format=svg`;
+    printStandeeBtn.href = `/qr/${tenant.id}/poster`;
+
+    qrModal.classList.remove("hidden");
+  };
+
+  function closeQrModal() {
+    qrModal.classList.add("hidden");
+  }
+
+  modalCloseBtn.addEventListener("click", closeQrModal);
+  qrModal.addEventListener("click", (e) => {
+    if (e.target === qrModal) closeQrModal();
+  });
+
+  copyLinkBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(modalWaLink.value);
+      copyLinkBtn.textContent = "Copied!";
+      setTimeout(() => { copyLinkBtn.textContent = "Copy"; }, 1500);
+    } catch (err) {
+      modalWaLink.select();
+      document.execCommand("copy");
+      copyLinkBtn.textContent = "Copied!";
+      setTimeout(() => { copyLinkBtn.textContent = "Copy"; }, 1500);
+    }
+  });
 
   async function onToggle(e) {
     const el = e.target;

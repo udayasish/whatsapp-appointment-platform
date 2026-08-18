@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Design Prototype — ClinicConnect</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          teal: {
+            50: '#f0fdfa',
+            100: '#ccfbf1',
+            200: '#99f6e4',
+            500: '#14b8a6',
+            600: '#0d9488',
+            700: '#0f766e',
+            800: '#115e59',
+            900: '#134e4a',
+          },
+          wa: {
+            green: '#25D366',
+            dark: '#128C7E',
+          }
+        },
+        fontFamily: {
+          sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .modal-blur { backdrop-filter: blur(6px); }
+  /* Custom toggle switch */
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    background-color: #cbd5e1;
+    transition: .2s;
+    border-radius: 9999px;
+  }
+  .dark .slider { background-color: #334155; }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  input:checked + .slider { background-color: #0f766e; }
+  .dark input:checked + .slider { background-color: #14b8a6; }
+  input:checked + .slider:before { transform: translateX(16px); }
+</style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased transition-colors duration-200">
+
+  <!-- Top Global Switcher Bar (For Prototype Verification) -->
+  <div class="bg-slate-900 dark:bg-slate-900 border-b border-slate-800 text-white px-4 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2 shadow-sm sticky top-0 z-30">
+    <div class="flex items-center space-x-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse"></span>
+      <span class="font-bold tracking-wide uppercase text-slate-200">ClinicConnect Design Prototype</span>
+      <span class="text-slate-600">|</span>
+      <span class="text-slate-400">Switch Screens:</span>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <button onclick="switchView('login')" id="tab-login" class="px-3 py-1 rounded font-medium bg-slate-800 text-slate-300 hover:text-white transition">1. Login</button>
+      <button onclick="switchView('super-admin')" id="tab-super" class="px-3 py-1 rounded font-medium bg-teal-700 text-white transition">2. Super Admin</button>
+      <button onclick="switchView('clinic-queue')" id="tab-clinic" class="px-3 py-1 rounded font-medium bg-slate-800 text-slate-300 hover:text-white transition">3. Clinic Queue</button>
+      <button onclick="switchView('clinic-qr')" id="tab-qr" class="px-3 py-1 rounded font-medium bg-slate-800 text-slate-300 hover:text-white transition">4. Clinic QR Hub</button>
+
+      <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+
+      <!-- Theme Switcher Button -->
+      <button onclick="toggleTheme()" class="px-3 py-1 rounded-lg font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 flex items-center gap-1.5 transition border border-slate-700">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="flex-1 flex flex-col">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: LOGIN SCREEN                       -->
+    <!-- ========================================== -->
+    <section id="view-login" class="hidden flex-1 flex items-center justify-center p-6">
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none p-8">
+        <div class="text-center mb-8">
+          <div class="w-12 h-12 bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 rounded-xl mx-auto flex items-center justify-center mb-3">
+            <span class="text-2xl">🏥</span>
+          </div>
+          <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">ClinicConnect</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in to your clinic or admin workspace</p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); switchView('super-admin');" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Email or Phone</label>
+            <input type="text" value="admin@clinicconnect.com" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none transition" />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Password</label>
+              <a href="#" class="text-xs text-teal-700 dark:text-teal-400 hover:underline">Forgot?</a>
+            </div>
+            <input type="password" value="••••••••••••" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none transition" />
+          </div>
+
+          <button type="submit" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+            Sign In
+          </button>
+        </form>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+          <p class="text-xs text-slate-400">Quick Switch Demo:</p>
+          <div class="flex justify-center gap-2 mt-2">
+            <button onclick="switchView('super-admin')" class="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-md font-medium transition">Login as Super Admin</button>
+            <button onclick="switchView('clinic-queue')" class="text-xs bg-teal-50 dark:bg-teal-950 hover:bg-teal-100 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 px-3 py-1 rounded-md font-medium transition">Login as Clinic Admin</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: SUPER ADMIN PORTAL                 -->
+    <!-- ========================================== -->
+    <section id="view-super-admin" class="flex-1 flex flex-col">
+      <!-- Navbar -->
+      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-[41px] z-10">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 bg-teal-700 dark:bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">C</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-900 dark:text-white text-base">ClinicConnect</span>
+              <span class="bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Super Admin</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Platform Management &amp; Clinic Controls</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button onclick="openAddClinicModal()" class="bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add New Clinic
+          </button>
+          <div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+          <button onclick="switchView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-medium px-2 py-1">Sign Out</button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="max-w-6xl w-full mx-auto p-6 space-y-6 flex-1">
+        
+        <!-- Summary Metric Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Active Clinics</div>
+            <div class="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+              <span>2</span>
+              <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">100% Operational</span>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Suspended / Revoked</div>
+            <div class="text-2xl font-bold text-slate-900 dark:text-white">0</div>
+          </div>
+          <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Bookable Slots</div>
+            <div class="text-2xl font-bold text-teal-700 dark:text-teal-400">568</div>
+          </div>
+        </div>
+
+        <!-- Clinics Table Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 class="font-bold text-slate-900 dark:text-white text-base">Registered Clinics</h2>
+            <div class="text-xs text-slate-500 dark:text-slate-400">2 total clinics</div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                  <th class="py-3 px-6">Clinic &amp; WhatsApp</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4 text-center">24h Reminders</th>
+                  <th class="py-3 px-4 text-center">Doctor Alerts</th>
+                  <th class="py-3 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <!-- Clinic 1 -->
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                  <td class="py-4 px-6">
+                    <div class="font-semibold text-slate-900 dark:text-white text-sm">Bang Clinic</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                      <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span>+91 88760 64436</span>
+                      <span class="text-slate-300 dark:text-slate-600">•</span>
+                      <span class="font-mono text-[11px] text-slate-400 dark:text-slate-500">ID: 1214681811733273</span>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      Active
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 text-center">
+                    <label class="switch inline-block">
+                      <input type="checkbox" checked onchange="showToast('Reminders updated for Bang Clinic')">
+                      <span class="slider"></span>
+                    </label>
+                  </td>
+                  <td class="py-4 px-4 text-center">
+                    <label class="switch inline-block">
+                      <input type="checkbox" checked onchange="showToast('Alerts updated for Bang Clinic')">
+                      <span class="slider"></span>
+                    </label>
+                  </td>
+                  <td class="py-4 px-6 text-right space-x-2">
+                    <button onclick="openQrModal('Bang Clinic', '+91 88760 64436')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 transition">
+                      📱 View QR
+                    </button>
+                    <button onclick="confirmSuspend('Bang Clinic')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-slate-200 dark:border-slate-700 transition">
+                      Suspend
+                    </button>
+                  </td>
+                </tr>
+
+                <!-- Clinic 2 -->
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                  <td class="py-4 px-6">
+                    <div class="font-semibold text-slate-900 dark:text-white text-sm">Sunrise Clinic</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                      <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span>+1 (555) 000-1111</span>
+                      <span class="text-slate-300 dark:text-slate-600">•</span>
+                      <span class="font-mono text-[11px] text-slate-400 dark:text-slate-500">ID: 100000000000001</span>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      Active
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 text-center">
+                    <label class="switch inline-block">
+                      <input type="checkbox" checked onchange="showToast('Reminders updated for Sunrise Clinic')">
+                      <span class="slider"></span>
+                    </label>
+                  </td>
+                  <td class="py-4 px-4 text-center">
+                    <label class="switch inline-block">
+                      <input type="checkbox" checked onchange="showToast('Alerts updated for Sunrise Clinic')">
+                      <span class="slider"></span>
+                    </label>
+                  </td>
+                  <td class="py-4 px-6 text-right space-x-2">
+                    <button onclick="openQrModal('Sunrise Clinic', '+1 (555) 000-1111')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 transition">
+                      📱 View QR
+                    </button>
+                    <button onclick="confirmSuspend('Sunrise Clinic')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-slate-200 dark:border-slate-700 transition">
+                      Suspend
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: CLINIC ADMIN - TODAY'S LIVE QUEUE -->
+    <!-- ========================================== -->
+    <section id="view-clinic-queue" class="hidden flex-1 flex flex-col">
+      <!-- Navbar -->
+      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-[41px] z-10">
+        <div class="flex items-center space-x-4">
+          <div class="w-9 h-9 bg-teal-700 dark:bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">🏥</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-900 dark:text-white text-base">Sunrise Clinic</span>
+              <span class="bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Clinic Admin</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Dr. Asha Verma (General Physician) • WhatsApp: +1 555-000-1111</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button onclick="switchView('clinic-qr')" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition">
+            📱 QR Code &amp; Standee
+          </button>
+          <div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+          <button onclick="switchView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-medium">Sign Out</button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="max-w-6xl w-full mx-auto p-6 space-y-6 flex-1">
+        
+        <!-- Date Bar & Filter -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Schedule:</span>
+            <button class="px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 dark:bg-teal-600 text-white shadow-sm">Today (Tue, 18 Aug)</button>
+            <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">Tomorrow (Wed, 19 Aug)</button>
+            <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">Thu, 20 Aug</button>
+          </div>
+
+          <div class="flex items-center space-x-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span>Total Today: <strong class="text-slate-900 dark:text-white">4 Booked</strong></span>
+            <span>•</span>
+            <span class="text-emerald-600 dark:text-emerald-400">Done: <strong>1</strong></span>
+            <span>•</span>
+            <span class="text-blue-600 dark:text-blue-400">Waiting: <strong>3</strong></span>
+          </div>
+        </div>
+
+        <!-- Appointments Queue Table -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 class="font-bold text-slate-900 dark:text-white text-base">Today's Patient Queue</h2>
+            <span class="text-xs bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-semibold px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
+              Live WhatsApp Bookings
+            </span>
+          </div>
+
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                <th class="py-3 px-6 w-20">Token</th>
+                <th class="py-3 px-4">Patient Name &amp; Age</th>
+                <th class="py-3 px-4">Time Slot</th>
+                <th class="py-3 px-4">Reason / Complaint</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-6 text-right">Quick Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300" id="queue-tbody">
+              <!-- Row 1 -->
+              <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition" id="row-token-1">
+                <td class="py-4 px-6">
+                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900 text-teal-900 dark:text-teal-200 font-bold text-sm">
+                    #1
+                  </span>
+                </td>
+                <td class="py-4 px-4 font-semibold text-slate-900 dark:text-white">
+                  Rahul Sharma
+                  <span class="block text-xs font-normal text-slate-500 dark:text-slate-400">Age: 38 • +91 98765 43210</span>
+                </td>
+                <td class="py-4 px-4 font-medium text-slate-900 dark:text-white">
+                  09:00 AM
+                </td>
+                <td class="py-4 px-4 text-slate-600 dark:text-slate-300">
+                  Fever &amp; headache for 2 days
+                </td>
+                <td class="py-4 px-4" id="status-token-1">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    Completed ✓
+                  </span>
+                </td>
+                <td class="py-4 px-6 text-right">
+                  <span class="text-xs text-slate-400 dark:text-slate-500">Consultation Finished</span>
+                </td>
+              </tr>
+
+              <!-- Row 2 -->
+              <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition bg-teal-50/30 dark:bg-teal-950/20" id="row-token-2">
+                <td class="py-4 px-6">
+                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-teal-700 dark:bg-teal-600 text-white font-bold text-sm shadow-sm">
+                    #2
+                  </span>
+                </td>
+                <td class="py-4 px-4 font-semibold text-slate-900 dark:text-white">
+                  Sunita Devi
+                  <span class="block text-xs font-normal text-slate-500 dark:text-slate-400">Age: 45 • +91 98000 11223</span>
+                </td>
+                <td class="py-4 px-4 font-medium text-slate-900 dark:text-white">
+                  09:15 AM
+                </td>
+                <td class="py-4 px-4 text-slate-600 dark:text-slate-300">
+                  Routine BP &amp; Sugar checkup
+                </td>
+                <td class="py-4 px-4" id="status-token-2">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    Booked (Waiting)
+                  </span>
+                </td>
+                <td class="py-4 px-6 text-right space-x-1.5" id="action-token-2">
+                  <button onclick="markDone(2)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm">
+                    Mark Done ✓
+                  </button>
+                  <button onclick="markNoShow(2)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition">
+                    No-Show
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Row 3 -->
+              <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition" id="row-token-3">
+                <td class="py-4 px-6">
+                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm">
+                    #3
+                  </span>
+                </td>
+                <td class="py-4 px-4 font-semibold text-slate-900 dark:text-white">
+                  Amitav Borah
+                  <span class="block text-xs font-normal text-slate-500 dark:text-slate-400">Age: 29 • +91 70020 59544</span>
+                </td>
+                <td class="py-4 px-4 font-medium text-slate-900 dark:text-white">
+                  09:30 AM
+                </td>
+                <td class="py-4 px-4 text-slate-600 dark:text-slate-300">
+                  Throat pain &amp; cough
+                </td>
+                <td class="py-4 px-4" id="status-token-3">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    Booked (Waiting)
+                  </span>
+                </td>
+                <td class="py-4 px-6 text-right space-x-1.5" id="action-token-3">
+                  <button onclick="markDone(3)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm">
+                    Mark Done ✓
+                  </button>
+                  <button onclick="markNoShow(3)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition">
+                    No-Show
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: CLINIC ADMIN - QR & STANDEE HUB    -->
+    <!-- ========================================== -->
+    <section id="view-clinic-qr" class="hidden flex-1 flex flex-col">
+      <!-- Navbar -->
+      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-[41px] z-10">
+        <div class="flex items-center space-x-4">
+          <button onclick="switchView('clinic-queue')" class="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline flex items-center gap-1">
+            &larr; Back to Today's Queue
+          </button>
+        </div>
+        <div class="text-sm font-bold text-slate-900 dark:text-white">Sunrise Clinic — Marketing &amp; QR Standee</div>
+        <button onclick="switchView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-medium">Sign Out</button>
+      </header>
+
+      <!-- Content -->
+      <div class="max-w-4xl w-full mx-auto p-6 space-y-6 flex-1">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col md:flex-row items-center gap-8">
+          <!-- QR Card Frame -->
+          <div class="w-64 bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl border-2 border-dashed border-teal-300 dark:border-teal-700 text-center shadow-sm shrink-0">
+            <div class="w-48 h-48 bg-white p-2 rounded-xl mx-auto border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+              <!-- Placeholder QR code image -->
+              <img src="/qr/100000000000001/image?size=400" alt="Clinic QR Code" class="w-full h-full object-contain" />
+            </div>
+            <div class="mt-4 inline-flex items-center gap-1.5 bg-emerald-500 text-white font-bold text-xs px-3 py-1 rounded-full shadow-sm">
+              <span>Scan to Chat</span>
+            </div>
+          </div>
+
+          <!-- QR Info & Actions -->
+          <div class="flex-1 space-y-5">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">WhatsApp Booking Channel</span>
+              <h2 class="text-2xl font-bold text-slate-900 dark:text-white mt-2">Sunrise Clinic</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300">WhatsApp Number: <strong class="text-slate-900 dark:text-white">+1 (555) 000-1111</strong></p>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Direct Click-to-Chat Link</label>
+              <div class="flex gap-2">
+                <input type="text" value="https://wa.me/15550001111?text=Hi" readonly class="flex-1 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono text-xs text-slate-700 dark:text-slate-200 outline-none" id="copy-target-link" />
+                <button onclick="copyLink()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition" id="copy-btn">
+                  Copy Link
+                </button>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-3">
+              <a href="/api/admin/tenants/100000000000001/qr/download?format=png" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
+                ⬇️ Download High-Res PNG
+              </a>
+              <a href="/api/admin/tenants/100000000000001/qr/download?format=svg" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 border border-slate-200 dark:border-slate-700">
+                ⬇️ Download SVG Vector
+              </a>
+              <a href="/qr/100000000000001/poster" target="_blank" class="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                🖨️ Print Counter Standee Poster
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ADD NEW CLINIC                      -->
+  <!-- ========================================== -->
+  <div id="add-clinic-modal" class="fixed inset-0 bg-slate-950/60 modal-blur z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 animate-in fade-in duration-200">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-lg">Add New Clinic</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Connect a new WhatsApp number and clinic profile</p>
+        </div>
+        <button onclick="closeAddClinicModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold p-1">&times;</button>
+      </div>
+
+      <form onsubmit="saveClinic(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Clinic Name</label>
+          <input type="text" placeholder="e.g. Metro Care Clinic" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Meta Phone Number ID</label>
+            <input type="text" placeholder="e.g. 1209654505573202" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-mono focus:ring-2 focus:ring-teal-700 outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">WhatsApp Display Number</label>
+            <input type="text" placeholder="e.g. +91 70020 59544" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Doctor Name</label>
+            <input type="text" placeholder="e.g. Dr. Rajesh Sharma" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Specialization</label>
+            <input type="text" placeholder="e.g. General Physician" required class="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none" />
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeAddClinicModal()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white transition shadow-sm">Save &amp; Activate Clinic</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl border border-slate-700 hidden transition transform z-50">
+    Action saved successfully
+  </div>
+
+  <script>
+    function switchView(viewName) {
+      ['login', 'super-admin', 'clinic-queue', 'clinic-qr'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        const tab = document.getElementById(`tab-${v === 'super-admin' ? 'super' : v === 'clinic-queue' ? 'clinic' : v === 'clinic-qr' ? 'qr' : 'login'}`);
+        if (v === viewName) {
+          el.classList.remove('hidden');
+          tab.classList.remove('bg-slate-800', 'text-slate-300');
+          tab.classList.add('bg-teal-700', 'text-white');
+        } else {
+          el.classList.add('hidden');
+          tab.classList.add('bg-slate-800', 'text-slate-300');
+          tab.classList.remove('bg-teal-700', 'text-white');
+        }
+      });
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      if (isDark) {
+        icon.textContent = '☀️';
+        text.textContent = 'Light Mode';
+      } else {
+        icon.textContent = '🌙';
+        text.textContent = 'Dark Mode';
+      }
+    }
+
+    function openAddClinicModal() {
+      document.getElementById('add-clinic-modal').classList.remove('hidden');
+    }
+    function closeAddClinicModal() {
+      document.getElementById('add-clinic-modal').classList.add('hidden');
+    }
+    function saveClinic(e) {
+      e.preventDefault();
+      closeAddClinicModal();
+      showToast('Clinic registered and activated successfully!');
+    }
+
+    function confirmSuspend(name) {
+      if (confirm(`Are you sure you want to suspend access for ${name}? Patients won't be able to book until reactivated.`)) {
+        showToast(`${name} access revoked / suspended.`);
+      }
+    }
+
+    function markDone(tokenId) {
+      const statusEl = document.getElementById(`status-token-${tokenId}`);
+      const actionEl = document.getElementById(`action-token-${tokenId}`);
+      statusEl.innerHTML = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">Completed ✓</span>`;
+      actionEl.innerHTML = `<span class="text-xs text-slate-400 dark:text-slate-500">Consultation Finished</span>`;
+      showToast(`Token #${tokenId} marked completed.`);
+    }
+
+    function markNoShow(tokenId) {
+      const statusEl = document.getElementById(`status-token-${tokenId}`);
+      const actionEl = document.getElementById(`action-token-${tokenId}`);
+      statusEl.innerHTML = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">No-Show</span>`;
+      actionEl.innerHTML = `<span class="text-xs text-slate-400 dark:text-slate-500">Marked No-Show</span>`;
+      showToast(`Token #${tokenId} marked as no-show.`);
+    }
+
+    function copyLink() {
+      const link = document.getElementById('copy-target-link');
+      navigator.clipboard.writeText(link.value);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Link', 1500);
+      showToast('Click-to-Chat link copied to clipboard!');
+    }
+
+    function openQrModal(name, phone) {
+      switchView('clinic-qr');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+  </script>
+</body>
+</html>

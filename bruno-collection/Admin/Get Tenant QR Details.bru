@@ -1,0 +1,15 @@
+meta {
+  name: Get Tenant QR Details
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/admin/tenants/{{tenantId}}/qr
+  body: none
+  auth: none
+}
+
+docs {
+  Returns structured QR info and Base64 Data URL for a specific clinic. Requires active admin session.
+}
