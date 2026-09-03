@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    --primary: #0f766e;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --accent: #f0fdfa;
+    --accent-foreground: #0f766e;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #0f766e;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #090d16;
+    --foreground: #f8fafc;
+    --card: #111827;
+    --card-foreground: #f8fafc;
+    --popover: #111827;
+    --popover-foreground: #f8fafc;
+    --primary: #14b8a6;
+    --primary-foreground: #042f2e;
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #134e4a;
+    --accent-foreground: #f0fdfa;
+    --destructive: #7f1d1d;
+    --destructive-foreground: #f8fafc;
+    --border: #1f2937;
+    --input: #1f2937;
+    --ring: #14b8a6;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Custom switch */
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background-color: #cbd5e1;
+  transition: .2s;
+  border-radius: 9999px;
+}
+.dark .slider { background-color: #334155; }
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+input:checked + .slider { background-color: #0f766e; }
+.dark input:checked + .slider { background-color: #14b8a6; }
+input:checked + .slider:before { transform: translateX(16px); }
+
+/* Glass Modal Blur */
+.modal-blur {
+  backdrop-filter: blur(8px);
+}

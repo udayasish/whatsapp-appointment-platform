@@ -70,6 +70,11 @@ export const blockedDateReasonEnum = pgEnum("blocked_date_reason", [
   "other",
 ]);
 
+export const adminRoleEnum = pgEnum("admin_role", [
+  "super_admin",
+  "clinic_admin",
+]);
+
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type DayOfWeek = (typeof dayOfWeekEnum.enumValues)[number];
 export type AppointmentStatus = (typeof appointmentStatusEnum.enumValues)[number];
@@ -79,3 +84,5 @@ export type ReportStatus = (typeof reportStatusEnum.enumValues)[number];
 export type SlotStatus = (typeof slotStatusEnum.enumValues)[number];
 export type TenantStatus = (typeof tenantStatusEnum.enumValues)[number];
 export type BlockedDateReason = (typeof blockedDateReasonEnum.enumValues)[number];
+export type AdminRole = (typeof adminRoleEnum.enumValues)[number];
+
