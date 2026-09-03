@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/authSlice";
+import { authService } from "@/lib/auth-service";
 import { ThemeToggle } from "./theme-toggle";
 import { LogOut, QrCode, Plus } from "lucide-react";
 
@@ -21,10 +22,12 @@ export function Navbar({
   onAddClinicClick,
 }: NavbarProps) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   const handleSignOut = async () => {
+    await authService.logout().catch(() => {});
     dispatch(logout());
-    await signOut({ callbackUrl: "/login" });
+    router.push("/login");
   };
 
   return (

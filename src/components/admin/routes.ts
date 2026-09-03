@@ -10,47 +10,100 @@ import {
   appointments,
   adminUsers,
 } from "../../lib/db/index.js";
-import { env } from "../../lib/env.js";
-import { requireAdminSession } from "./middleware.js";
+import { generateAccessToken } from "../../lib/jwt.js";
+import { requireAdminAuth, requireSuperAdmin } from "./middleware.js";
 import { loginRateLimit } from "./login-rate-limit.js";
+import { loginAdmin } from "./services/login.js";
 import { generateWaMeLink, sanitizePhoneNumber } from "../../common/wa-link.js";
 import { getClinicQrInfo, generateQrPngBuffer, generateQrSvg } from "../qr/index.js";
 
 export const adminRouter = Router();
 
-const loginSchema = z.object({ password: z.string().min(1) });
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
-adminRouter.post("/login", loginRateLimit, async (req, res) => {
-  const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "password is required" });
-    return;
-  }
+// ---------------------------------------------------------------------------
+// AUTH ROUTES  (no middleware — these are public)
+// ---------------------------------------------------------------------------
 
-  const valid = await bcrypt.compare(parsed.data.password, env.ADMIN_PASSWORD_HASH);
-  if (!valid) {
-    res.status(401).json({ error: "Incorrect password" });
-    return;
-  }
-
-  req.session.isAdmin = true;
-  res.json({ ok: true });
-});
-
-adminRouter.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ ok: true });
-  });
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
 });
 
 /**
- * GET /tenants
+ * POST /admin/auth/login
+ * Accepts { email, password }, returns { user } and sets httpOnly admin_token cookie.
+ */
+adminRouter.post("/auth/login", loginRateLimit, async (req, res) => {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Email and password are required" });
+    return;
+  }
+
+  try {
+    const user = await loginAdmin(parsed.data.email, parsed.data.password);
+    const token = await generateAccessToken(user);
+
+    res.cookie("admin_token", token, COOKIE_OPTS);
+    res.json({
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+      },
+    });
+  } catch (err: unknown) {
+    const e = err as Error & { status?: number };
+    res.status(e.status ?? 500).json({ error: e.message ?? "Login failed" });
+  }
+});
+
+/**
+ * POST /admin/auth/logout
+ * Clears the admin_token cookie.
+ */
+adminRouter.post("/auth/logout", (_req, res) => {
+  res.clearCookie("admin_token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  res.json({ ok: true });
+});
+
+/**
+ * GET /admin/auth/me
+ * Returns the currently authenticated admin user.
+ * Used by the Next.js frontend on every page load to hydrate Redux auth state.
+ */
+adminRouter.get("/auth/me", requireAdminAuth, (req, res) => {
+  const adminUser = (req as typeof req & { adminUser: Record<string, unknown> }).adminUser;
+  res.json({ user: adminUser });
+});
+
+// ---------------------------------------------------------------------------
+// TENANT ROUTES  (super admin only)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /admin/tenants
  * Lists all registered clinics with status, settings, and QR endpoints.
  */
-adminRouter.get("/tenants", requireAdminSession, async (_req, res) => {
+adminRouter.get("/tenants", requireAdminAuth, requireSuperAdmin, async (_req, res) => {
   const rows = await db.query.tenants.findMany({
     with: {
-      doctors: true,
+      doctors: {
+        with: { user: true },
+      },
     },
   });
 
@@ -66,7 +119,7 @@ adminRouter.get("/tenants", requireAdminSession, async (_req, res) => {
       notificationsEnabled: r.notificationsEnabled,
       whatsappDisplayNumber: r.whatsappDisplayNumber,
       whatsappPhoneNumberId: r.whatsappPhoneNumberId,
-      doctorName: primaryDoctor?.name ?? "Primary Doctor",
+      doctorName: primaryDoctor?.user?.name ?? "Primary Doctor",
       specialization: primaryDoctor?.specialization ?? "General Medicine",
       cleanPhone,
       waMeUrl,
@@ -74,6 +127,7 @@ adminRouter.get("/tenants", requireAdminSession, async (_req, res) => {
       imageUrl: `/qr/${r.id}/image`,
     };
   });
+
 
   res.json(withQr);
 });
@@ -88,10 +142,10 @@ const createTenantSchema = z.object({
 });
 
 /**
- * POST /tenants
- * Registers a new clinic, creates its initial doctor, and creates its clinic admin login.
+ * POST /admin/tenants
+ * Registers a new clinic, creates its initial doctor, and creates a clinic admin login.
  */
-adminRouter.post("/tenants", requireAdminSession, async (req, res) => {
+adminRouter.post("/tenants", requireAdminAuth, requireSuperAdmin, async (req, res) => {
   const parsed = createTenantSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid body" });
@@ -140,18 +194,15 @@ adminRouter.post("/tenants", requireAdminSession, async (req, res) => {
     })
     .returning();
 
-  let createdDoctor;
   if (docUser) {
-    const [doc] = await db
+    await db
       .insert(doctors)
       .values({
         tenantId: tenant.id,
         userId: docUser.id,
         specialization: specialization || "General Physician",
         consultationDurationMinutes: 15,
-      })
-      .returning();
-    createdDoctor = doc;
+      });
   }
 
   // 3. Create clinic admin login in admin_users
@@ -192,10 +243,10 @@ adminRouter.post("/tenants", requireAdminSession, async (req, res) => {
 });
 
 /**
- * PATCH /tenants/:id/status
- * Soft-deletes / suspends or reactivates a clinic.
+ * PATCH /admin/tenants/:id/status
+ * Suspends or reactivates a clinic.
  */
-adminRouter.patch("/tenants/:id/status", requireAdminSession, async (req, res) => {
+adminRouter.patch("/tenants/:id/status", requireAdminAuth, requireSuperAdmin, async (req, res) => {
   const statusSchema = z.object({
     status: z.enum(["active", "inactive", "suspended"]),
   });
@@ -221,59 +272,19 @@ adminRouter.patch("/tenants/:id/status", requireAdminSession, async (req, res) =
 });
 
 /**
- * GET /tenants/:id/qr
+ * PATCH /admin/tenants/:id/settings
  */
-adminRouter.get("/tenants/:id/qr", requireAdminSession, async (req, res) => {
-  const info = await getClinicQrInfo(String(req.params.id));
-  if (!info) {
-    res.status(404).json({ error: "Tenant not found" });
-    return;
-  }
-  res.json(info);
-});
-
-/**
- * GET /tenants/:id/qr/download
- */
-adminRouter.get("/tenants/:id/qr/download", requireAdminSession, async (req, res) => {
-  const info = await getClinicQrInfo(String(req.params.id));
-  if (!info) {
-    res.status(404).json({ error: "Tenant not found" });
-    return;
-  }
-
-  const format = req.query.format === "svg" ? "svg" : "png";
-  const size = Math.min(Math.max(Number(req.query.size) || 1600, 100), 4000);
-  const slug = info.clinicName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const filename = `${slug}-whatsapp-qr.${format}`;
-
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-  if (format === "svg") {
-    const svg = await generateQrSvg(info.waMeUrl, { width: size });
-    res.setHeader("Content-Type", "image/svg+xml");
-    res.send(svg);
-    return;
-  }
-
-  const pngBuffer = await generateQrPngBuffer(info.waMeUrl, { width: size });
-  res.setHeader("Content-Type", "image/png");
-  res.send(pngBuffer);
-});
-
 const settingsSchema = z
   .object({
     remindersEnabled: z.boolean().optional(),
     notificationsEnabled: z.boolean().optional(),
   })
-  .refine((v) => v.remindersEnabled !== undefined || v.notificationsEnabled !== undefined, {
-    message: "At least one of remindersEnabled/notificationsEnabled must be provided",
-  });
+  .refine(
+    (v) => v.remindersEnabled !== undefined || v.notificationsEnabled !== undefined,
+    { message: "At least one of remindersEnabled/notificationsEnabled must be provided" }
+  );
 
-/**
- * PATCH /tenants/:id/settings
- */
-adminRouter.patch("/tenants/:id/settings", requireAdminSession, async (req, res) => {
+adminRouter.patch("/tenants/:id/settings", requireAdminAuth, requireSuperAdmin, async (req, res) => {
   const parsed = settingsSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid body" });
@@ -300,14 +311,69 @@ adminRouter.patch("/tenants/:id/settings", requireAdminSession, async (req, res)
 });
 
 /**
- * GET /clinics/:tenantId/queue
- * Returns live appointments queue for a clinic on a specific date.
+ * GET /admin/tenants/:id/qr
  */
-adminRouter.get("/clinics/:tenantId/queue", requireAdminSession, async (req, res) => {
+adminRouter.get("/tenants/:id/qr", requireAdminAuth, requireSuperAdmin, async (req, res) => {
+  const info = await getClinicQrInfo(String(req.params.id));
+  if (!info) {
+    res.status(404).json({ error: "Tenant not found" });
+    return;
+  }
+  res.json(info);
+});
+
+/**
+ * GET /admin/tenants/:id/qr/download
+ */
+adminRouter.get("/tenants/:id/qr/download", requireAdminAuth, requireSuperAdmin, async (req, res) => {
+  const info = await getClinicQrInfo(String(req.params.id));
+  if (!info) {
+    res.status(404).json({ error: "Tenant not found" });
+    return;
+  }
+
+  const format = req.query.format === "svg" ? "svg" : "png";
+  const size = Math.min(Math.max(Number(req.query.size) || 1600, 100), 4000);
+  const slug = info.clinicName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const filename = `${slug}-whatsapp-qr.${format}`;
+
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  if (format === "svg") {
+    const svg = await generateQrSvg(info.waMeUrl, { width: size });
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.send(svg);
+    return;
+  }
+
+  const pngBuffer = await generateQrPngBuffer(info.waMeUrl, { width: size });
+  res.setHeader("Content-Type", "image/png");
+  res.send(pngBuffer);
+});
+
+// ---------------------------------------------------------------------------
+// CLINIC QUEUE ROUTES  (both super_admin and clinic_admin can access)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /admin/clinics/:tenantId/queue
+ * Returns live appointments queue for a clinic on a specific date.
+ * Clinic admins can only access their own clinic's queue.
+ */
+adminRouter.get("/clinics/:tenantId/queue", requireAdminAuth, async (req, res) => {
+  const reqWithUser = req as typeof req & { adminUser: { role: string; tenantId: string | null } };
   const tenantIdentifier = String(req.params.tenantId);
   const dateParam = String(req.query.date || new Date().toISOString().split("T")[0]);
 
-  // Resolve tenant by ID or phone number ID
+  // Clinic admins can only see their own queue
+  if (
+    reqWithUser.adminUser.role === "clinic_admin" &&
+    reqWithUser.adminUser.tenantId !== tenantIdentifier
+  ) {
+    res.status(403).json({ error: "Access denied to this clinic's queue" });
+    return;
+  }
+
   const tenant = await db.query.tenants.findFirst({
     where: or(
       eq(tenants.id, tenantIdentifier),
@@ -346,10 +412,9 @@ adminRouter.get("/clinics/:tenantId/queue", requireAdminSession, async (req, res
 });
 
 /**
- * PATCH /appointments/:id/status
- * Updates appointment status to booked, completed, noshow, or cancelled.
+ * PATCH /admin/appointments/:id/status
  */
-adminRouter.patch("/appointments/:id/status", requireAdminSession, async (req, res) => {
+adminRouter.patch("/appointments/:id/status", requireAdminAuth, async (req, res) => {
   const aptStatusSchema = z.object({
     status: z.enum(["booked", "completed", "noshow", "cancelled"]),
   });

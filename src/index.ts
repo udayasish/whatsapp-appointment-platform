@@ -10,19 +10,16 @@ import "./components/appointments/queue/reminder-worker.js";
 import "./components/reports/queue/report-worker.js";
 import "./components/notifications/queue/notification-worker.js";
 import { syncMorningSummarySchedulers } from "./components/notifications/queue/index.js";
-import { ensureSessionRedisConnected } from "./components/admin/index.js";
 
 const server = app.listen(env.PORT, () => {
   logger.info(
     `whatsapp-appointment-platform listening on port ${env.PORT} (${env.NODE_ENV})`
   );
-  syncMorningSummarySchedulers().catch((err) => {
+  syncMorningSummarySchedulers().catch((err: unknown) => {
     logger.error("Failed to sync morning-summary schedulers at boot", { err });
   });
-  ensureSessionRedisConnected().catch((err) => {
-    logger.error("Failed to connect admin session Redis client", { err });
-  });
 });
+
 
 async function shutdown(signal: string) {
   logger.info(`${signal} received — shutting down`);

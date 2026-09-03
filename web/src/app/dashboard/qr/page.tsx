@@ -2,19 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Navbar } from "@/components/navbar";
+import { DashboardShell } from "@/components/dashboard-shell";
+import { PageHeader } from "@/components/page-header";
 import {
   ArrowLeft,
   Copy,
   Download,
   Printer,
   Smartphone,
+  Check,
+  QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 export default function ClinicQrPage() {
   const [copiedLink, setCopiedLink] = useState(false);
-  const deepLink = "https://wa.me/15550001111?text=Hi";
+  const deepLink = "https://wa.me/919876543210?text=Hi";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(deepLink);
@@ -24,153 +31,182 @@ export default function ClinicQrPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
-      <Navbar
-        role="clinic_admin"
-        clinicName="Sunrise Clinic"
-        doctorSubtitle="Dr. Asha Verma (General Physician) • WhatsApp: +1 (555) 000-1111"
-      />
-
-      <main className="max-w-4xl w-full mx-auto p-6 space-y-6 flex-1">
-        {/* Navigation Breadcrumb */}
-        <div>
-          <Link
-            href="/dashboard"
-            className="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline flex items-center gap-1"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Today's Live Queue</span>
-          </Link>
-        </div>
-
-        {/* Standee & Marketing Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col md:flex-row items-center gap-8 transition-colors">
-          {/* Left Frame: Large QR */}
-          <div className="w-72 bg-slate-50 dark:bg-slate-800/80 p-6 rounded-3xl border-2 border-dashed border-teal-300 dark:border-teal-700 text-center shadow-xs shrink-0 flex flex-col items-center">
-            <div className="w-56 h-56 bg-white p-2 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs">
-              <img
-                src="/qr/100000000000001/image?size=500"
-                alt="Clinic WhatsApp QR"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="mt-4 inline-flex items-center gap-1.5 bg-emerald-500 text-white font-bold text-xs px-3.5 py-1 rounded-full shadow-xs">
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Scan with WhatsApp</span>
-            </div>
+    <DashboardShell>
+      <PageHeader>
+        <div className="flex flex-1 items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" asChild className="size-7">
+              <Link href="/dashboard">
+                <ArrowLeft className="size-4" />
+              </Link>
+            </Button>
+            <span className="font-semibold text-sm">Sunrise Clinic</span>
+            <span className="text-muted-foreground text-xs">/</span>
+            <span className="text-muted-foreground text-xs font-normal">QR Code &amp; Reception Standee</span>
           </div>
 
-          {/* Right Content */}
-          <div className="flex-1 space-y-5">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/80 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
-                Official WhatsApp Booking QR
-              </span>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-2 tracking-tight">
-                Sunrise Clinic
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                WhatsApp Booking Number:{" "}
-                <strong className="text-slate-900 dark:text-white font-mono">
-                  +1 (555) 000-1111
-                </strong>
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              onClick={copyToClipboard}
+            >
+              {copiedLink ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+              <span>Copy Link</span>
+            </Button>
 
-            {/* Click-to-Chat Box */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Direct Click-to-Chat Deep Link
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={deepLink}
-                  className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono text-xs text-slate-700 dark:text-slate-300 outline-none"
+            <Button
+              size="sm"
+              className="h-8 gap-1 text-xs font-medium"
+              onClick={() => window.print()}
+            >
+              <Printer className="size-3.5" />
+              <span>Print Poster</span>
+            </Button>
+          </div>
+        </div>
+      </PageHeader>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 max-w-4xl mx-auto w-full">
+        {/* Main Standee Showcase Card matching AbleSpace */}
+        <Card className="shadow-none border-border">
+          <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row items-center gap-8">
+            {/* QR Frame */}
+            <div className="w-64 flex flex-col items-center justify-center p-6 bg-muted/40 rounded-xl border border-dashed border-border shrink-0 text-center">
+              <div className="size-48 bg-white p-2 rounded-lg border border-border flex items-center justify-center shadow-xs">
+                <img
+                  src="http://127.0.0.1:3000/qr/100000000000001/image?size=500"
+                  alt="WhatsApp QR"
+                  className="size-full object-contain"
                 />
-                <button
-                  onClick={copyToClipboard}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
-                </button>
+              </div>
+
+              <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                <Smartphone className="size-3.5" />
+                <span>Scan with WhatsApp</span>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-2.5">
-              <a
-                href="/api/admin/tenants/100000000000001/qr/download?format=png"
-                download
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download PNG</span>
-              </a>
+            {/* Standee Info & Actions */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <Badge variant="secondary" className="text-[10px] uppercase font-bold">
+                  Official OPD Booking QR
+                </Badge>
+                <h1 className="text-xl font-bold tracking-tight text-foreground mt-1.5">
+                  Sunrise Clinic Standee
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Dr. Asha Verma (General Physician) • WhatsApp: <strong className="text-foreground font-mono">+91 98765 43210</strong>
+                </p>
+              </div>
 
-              <a
-                href="/api/admin/tenants/100000000000001/qr/download?format=svg"
-                download
-                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download SVG Vector</span>
-              </a>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-muted-foreground">
+                  Direct Click-to-Chat Deep Link
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={deepLink}
+                    className="h-8 font-mono text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1 text-xs"
+                    onClick={copyToClipboard}
+                  >
+                    {copiedLink ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                    <span>{copiedLink ? "Copied" : "Copy"}</span>
+                  </Button>
+                </div>
+              </div>
 
-              <a
-                href="/qr/100000000000001/poster"
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-xs"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Counter Standee (A4)</span>
-              </a>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1"
+                  asChild
+                >
+                  <a
+                    href="http://127.0.0.1:3000/api/admin/tenants/100000000000001/qr/download?format=png"
+                    download
+                  >
+                    <Download className="size-3.5" />
+                    <span>Download PNG</span>
+                  </a>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1"
+                  asChild
+                >
+                  <a
+                    href="http://127.0.0.1:3000/api/admin/tenants/100000000000001/qr/download?format=svg"
+                    download
+                  >
+                    <Download className="size-3.5" />
+                    <span>Download SVG</span>
+                  </a>
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 text-xs gap-1"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="size-3.5" />
+                  <span>Print Desk Poster</span>
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* 3 Step Instruction Card */}
+        {/* 3 Step Instructions Card matching AbleSpace */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center border border-teal-200 dark:border-teal-800">
-              1
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm">
-              Place at Reception Desk
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Print the A4 countertop poster or embed the high-res PNG on your clinic reception standee.
-            </p>
-          </div>
+          <Card className="shadow-none border-border">
+            <CardHeader className="p-4 pb-2">
+              <div className="size-6 rounded-md bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center mb-1">
+                1
+              </div>
+              <CardTitle className="text-xs font-semibold">Print &amp; Display</CardTitle>
+              <CardDescription className="text-[11px]">
+                Download high-res PNG or SVG and place acrylic standees on the reception table and waiting lounge.
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center border border-teal-200 dark:border-teal-800">
-              2
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm">
-              Patient Scans &amp; Sends "Hi"
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Scanning opens WhatsApp directly with "Hi" pre-filled. The automated OPD bot guides booking in 30 seconds.
-            </p>
-          </div>
+          <Card className="shadow-none border-border">
+            <CardHeader className="p-4 pb-2">
+              <div className="size-6 rounded-md bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center mb-1">
+                2
+              </div>
+              <CardTitle className="text-xs font-semibold">Patient Scans QR</CardTitle>
+              <CardDescription className="text-[11px]">
+                Patients open their phone camera or WhatsApp scanner to immediately open the clinic chat.
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center border border-teal-200 dark:border-teal-800">
-              3
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm">
-              Instant Queue Sync
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Booked patients receive their token number and appear live on your Clinic Dashboard queue!
-            </p>
-          </div>
+          <Card className="shadow-none border-border">
+            <CardHeader className="p-4 pb-2">
+              <div className="size-6 rounded-md bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center mb-1">
+                3
+              </div>
+              <CardTitle className="text-xs font-semibold">Automatic Token</CardTitle>
+              <CardDescription className="text-[11px]">
+                The bot responds in 2 seconds, lets them choose a time slot, and assigns an OPD queue token.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

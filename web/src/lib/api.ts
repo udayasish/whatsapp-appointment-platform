@@ -20,12 +20,14 @@ export async function apiFetch<T>(
 
   const res = await fetch(url, {
     ...init,
+    credentials: (init as RequestInit & { credentials?: RequestCredentials }).credentials ?? "include",
     headers: {
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+
 
   const payload = (await res.json().catch(() => null)) as
     | { data?: T; error?: string; [key: string]: unknown }
