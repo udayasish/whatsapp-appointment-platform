@@ -13,18 +13,19 @@ const envSchema = z.object({
   WHATSAPP_APP_SECRET: z.string().min(1),
   WHATSAPP_ACCESS_TOKEN: z.string().min(1),
   WHATSAPP_API_VERSION: z.string().default("v21.0"),
-  // Only needed for scripts/register-templates.ts — the WABA that owns the
-  // message templates, not the per-tenant phone_number_id used elsewhere.
+  // Only needed for scripts/register-templates.ts
   WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
-  // Overridable so local/dev testing can point at a mock server instead of
-  // making real calls to Meta.
+  // Overridable so local/dev testing can point at a mock server instead of Meta.
   WHATSAPP_GRAPH_API_BASE_URL: z.url().default("https://graph.facebook.com"),
   BOOKING_HORIZON_DAYS: z.coerce.number().int().positive().default(10),
-  // --- Admin web interface ---
-  // bcrypt hash of the single admin password — never store the plaintext.
-  ADMIN_PASSWORD_HASH: z.string().min(1),
-  // Signs the admin session cookie.
-  SESSION_SECRET: z.string().min(16),
+  // --- Admin dashboard JWT auth ---
+  // Used to sign admin JWT access tokens. Must be at least 32 chars.
+  ACCESS_TOKEN_SECRET: z
+    .string()
+    .min(16)
+    .default("clinicconnect-access-token-secret-dev-32chars"),
+  // How long the admin JWT stays valid. e.g. "7d", "24h"
+  ACCESS_TOKEN_EXPIRATION: z.string().default("7d"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -38,3 +39,4 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+

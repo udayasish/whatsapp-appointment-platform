@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   setClinics,
@@ -10,24 +10,49 @@ import {
   addClinic,
 } from "@/store/clinicsSlice";
 import { clinicsService } from "@/lib/clinics-service";
-import { Navbar } from "@/components/navbar";
+import { DashboardShell } from "@/components/dashboard-shell";
+import { PageHeader } from "@/components/page-header";
 import {
   Building2,
   CheckCircle2,
   AlertTriangle,
-  CalendarDays,
   QrCode,
   Search,
-  X,
+  Plus,
   Copy,
   Download,
   Printer,
   Ban,
   RotateCcw,
-  Loader2,
+  Check,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Clinic } from "@/types/api";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function SuperAdminPage() {
   const dispatch = useAppDispatch();
@@ -35,12 +60,13 @@ export default function SuperAdminPage() {
 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "suspended">("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedQrClinic, setSelectedQrClinic] = useState<Clinic | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [savingClinic, setSavingClinic] = useState(false);
 
-  // Form State
+  // Form State for Onboarding
   const [formData, setFormData] = useState({
     name: "",
     whatsappPhoneNumberId: "",
@@ -49,7 +75,6 @@ export default function SuperAdminPage() {
     specialization: "",
   });
 
-  // Fetch real clinics from Node.js backend on mount
   useEffect(() => {
     clinicsService
       .list()
@@ -68,7 +93,7 @@ export default function SuperAdminPage() {
 
   const handleToggleReminder = async (clinic: Clinic) => {
     const nextState = !clinic.remindersEnabled;
-    dispatch(toggleReminder(clinic.id)); // optimistic update
+    dispatch(toggleReminder(clinic.id));
 
     try {
       await clinicsService.updateSettings(clinic.id, {
@@ -78,14 +103,14 @@ export default function SuperAdminPage() {
         `24h Reminders ${nextState ? "enabled" : "disabled"} for ${clinic.name}`
       );
     } catch {
-      dispatch(toggleReminder(clinic.id)); // rollback
+      dispatch(toggleReminder(clinic.id));
       toast.error("Failed to update reminder settings");
     }
   };
 
   const handleToggleAlerts = async (clinic: Clinic) => {
     const nextState = !clinic.notificationsEnabled;
-    dispatch(toggleAlerts(clinic.id)); // optimistic update
+    dispatch(toggleAlerts(clinic.id));
 
     try {
       await clinicsService.updateSettings(clinic.id, {
@@ -95,7 +120,7 @@ export default function SuperAdminPage() {
         `Doctor alerts ${nextState ? "enabled" : "disabled"} for ${clinic.name}`
       );
     } catch {
-      dispatch(toggleAlerts(clinic.id)); // rollback
+      dispatch(toggleAlerts(clinic.id));
       toast.error("Failed to update alert settings");
     }
   };
@@ -107,11 +132,11 @@ export default function SuperAdminPage() {
     if (
       confirm(
         isSuspending
-          ? `Are you sure you want to suspend access for ${clinic.name}? WhatsApp appointments will be disabled.`
-          : `Reactivate access for ${clinic.name}?`
+          ? `Suspend ${clinic.name}?`
+          : `Reactivate ${clinic.name}?`
       )
     ) {
-      dispatch(toggleStatus(clinic.id)); // optimistic update
+      dispatch(toggleStatus(clinic.id));
 
       try {
         await clinicsService.updateStatus(clinic.id, nextStatus);
@@ -121,7 +146,7 @@ export default function SuperAdminPage() {
           toast.success(`${clinic.name} access reactivated.`);
         }
       } catch {
-        dispatch(toggleStatus(clinic.id)); // rollback
+        dispatch(toggleStatus(clinic.id));
         toast.error("Failed to update clinic status");
       }
     }
@@ -152,11 +177,19 @@ export default function SuperAdminPage() {
     }
   };
 
-  const filteredClinics = clinics.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.whatsappDisplayNumber.includes(searchQuery)
-  );
+  const visibleClinics = useMemo(() => {
+    return clinics.filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.whatsappDisplayNumber.includes(searchQuery) ||
+        (c.doctorName && c.doctorName.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesStatus =
+        filterStatus === "all" ? true : c.status === filterStatus;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [clinics, searchQuery, filterStatus]);
 
   const activeCount = clinics.filter((c) => c.status === "active").length;
   const suspendedCount = clinics.filter((c) => c.status === "suspended").length;
@@ -169,408 +202,429 @@ export default function SuperAdminPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
-      <Navbar
-        role="super_admin"
-        onAddClinicClick={() => setIsAddModalOpen(true)}
-      />
-
-      <main className="max-w-6xl w-full mx-auto p-6 space-y-6 flex-1">
-        {/* Metric Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-              <span>Active Clinics</span>
-              <Building2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            </div>
-            <div className="text-3xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2.5">
-              <span>{activeCount}</span>
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                100% Operational
-              </span>
-            </div>
+    <DashboardShell>
+      {/* Page Header */}
+      <PageHeader>
+        <div className="flex flex-1 items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">Platform</span>
+            <span className="text-muted-foreground text-xs">/</span>
+            <span className="text-muted-foreground text-xs font-normal">Clinics Directory</span>
+            <Badge variant="secondary" className="text-[10px] uppercase font-bold ml-2">
+              Super Admin
+            </Badge>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-              <span>Suspended / Revoked</span>
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-            </div>
-            <div className="text-3xl font-bold text-slate-900 dark:text-white">
-              {suspendedCount}
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-              <span>Total Bookable Slots</span>
-              <CalendarDays className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            </div>
-            <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
-              568
-            </div>
-          </div>
-        </div>
-
-        {/* Registered Clinics Table */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden transition-colors">
-          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="font-bold text-slate-900 dark:text-white text-base tracking-tight">
-                Registered Clinics
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Manage WhatsApp connectivity, automated reminders and access controls
-              </p>
-            </div>
-
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+              <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search clinic or phone..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-teal-700 dark:focus:ring-teal-500"
+                placeholder="Search clinics, doctors…"
+                className="h-8 w-44 sm:w-60 pl-8 text-xs"
               />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
             </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
-                <span className="text-xs">Loading clinics from database...</span>
-              </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-50/75 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                    <th className="py-3 px-6">Clinic &amp; WhatsApp</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-center">24h Reminders</th>
-                    <th className="py-3 px-4 text-center">Doctor Alerts</th>
-                    <th className="py-3 px-6 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                  {filteredClinics.map((clinic) => (
-                    <tr
-                      key={clinic.id}
-                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
-                    >
-                      <td className="py-4 px-6">
-                        <div className="font-semibold text-slate-900 dark:text-white text-sm">
-                          {clinic.name}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 font-mono">
-                          <span
-                            className={`inline-block w-1.5 h-1.5 rounded-full ${
-                              clinic.status === "active"
-                                ? "bg-emerald-500"
-                                : "bg-amber-500"
-                            }`}
-                          />
-                          <span>{clinic.whatsappDisplayNumber}</span>
-                          <span className="text-slate-300 dark:text-slate-600">
-                            •
-                          </span>
-                          <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                            ID: {clinic.whatsappPhoneNumberId}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        {clinic.status === "active" ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                            Suspended
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <label className="switch inline-block">
-                          <input
-                            type="checkbox"
-                            checked={clinic.remindersEnabled}
-                            onChange={() => handleToggleReminder(clinic)}
-                          />
-                          <span className="slider" />
-                        </label>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <label className="switch inline-block">
-                          <input
-                            type="checkbox"
-                            checked={clinic.notificationsEnabled}
-                            onChange={() => handleToggleAlerts(clinic)}
-                          />
-                          <span className="slider" />
-                        </label>
-                      </td>
-                      <td className="py-4 px-6 text-right space-x-2">
-                        <button
-                          onClick={() => setSelectedQrClinic(clinic)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-950/80 text-teal-800 dark:text-teal-200 hover:bg-teal-100 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 transition cursor-pointer"
-                        >
-                          <QrCode className="w-3.5 h-3.5" />
-                          <span>View QR</span>
-                        </button>
-                        <button
-                          onClick={() => handleToggleSuspend(clinic)}
-                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                            clinic.status === "active"
-                              ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border-slate-200 dark:border-slate-700"
-                              : "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800"
-                          }`}
-                        >
-                          {clinic.status === "active" ? (
-                            <>
-                              <Ban className="w-3.5 h-3.5" />
-                              <span>Suspend</span>
-                            </>
-                          ) : (
-                            <>
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Reactivate</span>
-                            </>
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            <Button
+              size="sm"
+              className="h-8 gap-1 text-xs font-medium"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              <span>Add Clinic</span>
+            </Button>
           </div>
         </div>
-      </main>
+      </PageHeader>
 
-      {/* MODAL: ADD NEW CLINIC */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 modal-blur z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 transition-colors">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-lg">
-                  Add New Clinic
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Connect a new WhatsApp number and clinic doctor profile
-                </p>
+      {/* Main Content Area */}
+      <div className="flex min-w-0 flex-1 flex-col gap-5 p-4 sm:p-6">
+        {/* Metric Summary Cards */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Card className="shadow-none border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Total Partner Clinics</CardTitle>
+              <Building2 className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="text-2xl font-semibold tracking-tight">{clinics.length}</div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Registered tenants</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+              <CardTitle className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Active Clinics</CardTitle>
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="text-2xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400">
+                {activeCount}
               </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Accepting WhatsApp bookings</p>
+            </CardContent>
+          </Card>
 
-            <form onSubmit={handleSaveClinic} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Clinic Name
-                </label>
-                <input
-                  type="text"
+          <Card className="shadow-none border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+              <CardTitle className="text-xs font-medium text-amber-600 dark:text-amber-400">Suspended</CardTitle>
+              <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="text-2xl font-semibold tracking-tight text-amber-600 dark:text-amber-400">
+                {suspendedCount}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Access halted</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">WhatsApp API</CardTitle>
+              <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="text-2xl font-semibold tracking-tight text-foreground">Active</div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Meta Graph API v21.0</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1 rounded-lg border border-border p-1 bg-muted/30 w-fit">
+          <Button
+            variant={filterStatus === "all" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 text-xs px-3 font-medium"
+            onClick={() => setFilterStatus("all")}
+          >
+            All ({clinics.length})
+          </Button>
+          <Button
+            variant={filterStatus === "active" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 text-xs px-3 font-medium"
+            onClick={() => setFilterStatus("active")}
+          >
+            Active ({activeCount})
+          </Button>
+          <Button
+            variant={filterStatus === "suspended" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 text-xs px-3 font-medium"
+            onClick={() => setFilterStatus("suspended")}
+          >
+            Suspended ({suspendedCount})
+          </Button>
+        </div>
+
+        {/* Clinics Table matching AbleSpace */}
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+          </div>
+        ) : visibleClinics.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-12 text-center">
+            <Building2 className="size-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+            <h3 className="font-semibold text-sm">No Clinics Found</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              {searchQuery ? "No clinics match your search query." : "Click '+ Add Clinic' to onboard your first partner clinic."}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent bg-muted/40 border-b border-border">
+                  <TableHead className="font-semibold text-xs min-w-[200px]">Clinic &amp; Location</TableHead>
+                  <TableHead className="font-semibold text-xs min-w-[180px]">Primary Doctor</TableHead>
+                  <TableHead className="font-semibold text-xs">WhatsApp Number</TableHead>
+                  <TableHead className="font-semibold text-xs text-center w-32">24h Reminders</TableHead>
+                  <TableHead className="font-semibold text-xs text-center w-32">Doctor Alerts</TableHead>
+                  <TableHead className="font-semibold text-xs w-24">Status</TableHead>
+                  <TableHead className="font-semibold text-xs text-right w-44">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleClinics.map((clinic) => {
+                  const isActive = clinic.status === "active";
+
+                  return (
+                    <TableRow key={clinic.id} className="border-b border-border hover:bg-muted/40 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="size-8 rounded-lg border border-border">
+                            <AvatarFallback className="text-[11px] font-semibold bg-muted text-foreground rounded-lg">
+                              {clinic.name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-xs text-foreground">{clinic.name}</span>
+                            <span className="text-[11px] text-muted-foreground">ID: {clinic.id.slice(0, 8)}…</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-foreground">{clinic.doctorName}</span>
+                          <span className="text-[11px] text-muted-foreground">{clinic.specialization}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono text-muted-foreground">
+                        {clinic.whatsappDisplayNumber}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={clinic.remindersEnabled}
+                          onClick={() => handleToggleReminder(clinic)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            clinic.remindersEnabled ? "bg-primary" : "bg-input"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                              clinic.remindersEnabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={clinic.notificationsEnabled}
+                          onClick={() => handleToggleAlerts(clinic)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            clinic.notificationsEnabled ? "bg-primary" : "bg-input"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                              clinic.notificationsEnabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        {isActive ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium">
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] font-medium">
+                            Suspended
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs px-2 gap-1"
+                            onClick={() => setSelectedQrClinic(clinic)}
+                          >
+                            <QrCode className="size-3" />
+                            <span>QR</span>
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-7 text-xs px-2 ${
+                              isActive ? "text-muted-foreground hover:text-destructive" : "text-emerald-600 hover:text-emerald-700"
+                            }`}
+                            onClick={() => handleToggleSuspend(clinic)}
+                          >
+                            {isActive ? (
+                              <>
+                                <Ban className="size-3 mr-1" />
+                                Suspend
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="size-3 mr-1" />
+                                Reactivate
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+
+      {/* Onboard New Clinic Modal Dialog (AbleSpace style) */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleSaveClinic}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">Onboard New Clinic</DialogTitle>
+              <DialogDescription className="text-xs">
+                Register a healthcare tenant and configure its WhatsApp bot.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-3.5 py-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="clinic-name" className="text-xs">Clinic Name</Label>
+                <Input
+                  id="clinic-name"
                   required
-                  placeholder="e.g. Apex Health Clinic"
+                  placeholder="e.g. Brahmaputra Heart & Care"
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none"
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="h-8 text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Meta Phone Number ID
-                  </label>
-                  <input
-                    type="text"
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="doc-name" className="text-xs">Doctor Name</Label>
+                  <Input
+                    id="doc-name"
                     required
-                    placeholder="e.g. 1209654505573202"
-                    value={formData.whatsappPhoneNumberId}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        whatsappPhoneNumberId: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-mono focus:ring-2 focus:ring-teal-700 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    WhatsApp Display Number
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. +91 70020 59544"
-                    value={formData.whatsappDisplayNumber}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        whatsappDisplayNumber: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Doctor Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Dr. Rajesh Sharma"
+                    placeholder="Dr. Dipankar Sarma"
                     value={formData.doctorName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, doctorName: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none"
+                    onChange={(e) => setFormData({ ...formData, doctorName: e.target.value })}
+                    className="h-8 text-xs"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Specialization
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. General Physician"
+                <div className="grid gap-1.5">
+                  <Label htmlFor="specialization" className="text-xs">Specialization</Label>
+                  <Input
+                    id="specialization"
+                    placeholder="Cardiologist"
                     value={formData.specialization}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        specialization: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-700 outline-none"
+                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    className="h-8 text-xs"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingClinic}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white transition shadow-xs cursor-pointer flex items-center gap-1"
-                >
-                  {savingClinic && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Save &amp; Activate Clinic</span>
-                </button>
+              <div className="grid gap-1.5">
+                <Label htmlFor="wa-display" className="text-xs">WhatsApp Display Number</Label>
+                <Input
+                  id="wa-display"
+                  required
+                  placeholder="+91 98765 43210"
+                  value={formData.whatsappDisplayNumber}
+                  onChange={(e) => setFormData({ ...formData, whatsappDisplayNumber: e.target.value })}
+                  className="h-8 text-xs font-mono"
+                />
+                <span className="text-[10px] text-muted-foreground">Patients will chat with this phone number</span>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* MODAL: VIEW QR */}
+              <div className="grid gap-1.5">
+                <Label htmlFor="wa-id" className="text-xs">WhatsApp Phone Number ID (Meta)</Label>
+                <Input
+                  id="wa-id"
+                  required
+                  placeholder="109283746592817"
+                  value={formData.whatsappPhoneNumberId}
+                  onChange={(e) => setFormData({ ...formData, whatsappPhoneNumberId: e.target.value })}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/30 p-2.5 flex items-start gap-2">
+                <Sparkles className="size-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  <strong className="text-foreground font-medium">Automatic Provisioning:</strong> Creates the clinic admin login (<code className="font-mono text-[10px]">admin@clinic.com</code> / <code className="font-mono text-[10px]">Password@123</code>) and generates WhatsApp QR standees.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setIsAddModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={savingClinic}
+                className="h-8 text-xs font-medium"
+              >
+                {savingClinic ? "Registering…" : "Register & Activate Clinic"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR & Standee Modal Dialog */}
       {selectedQrClinic && (
-        <div className="fixed inset-0 bg-slate-950/60 modal-blur z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 transition-colors">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  {selectedQrClinic.name} — WhatsApp QR
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+        <Dialog open={!!selectedQrClinic} onOpenChange={() => setSelectedQrClinic(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">{selectedQrClinic.name} — QR Code</DialogTitle>
+              <DialogDescription className="text-xs">
+                Scan with WhatsApp to test or download high-resolution marketing assets.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col items-center justify-center p-4">
+              <div className="p-3 bg-white rounded-xl border border-border shadow-xs">
+                <img
+                  src={`http://127.0.0.1:3000/qr/${selectedQrClinic.id}/image`}
+                  alt="WhatsApp QR Code"
+                  className="w-48 h-48 object-contain"
+                />
+              </div>
+
+              <div className="mt-3 text-center">
+                <p className="text-xs font-semibold text-foreground">{selectedQrClinic.doctorName}</p>
+                <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
                   {selectedQrClinic.whatsappDisplayNumber}
                 </p>
               </div>
-              <button
-                onClick={() => setSelectedQrClinic(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs flex-1 gap-1"
+                onClick={() => copyToClipboard(selectedQrClinic.waMeUrl ?? "")}
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+                {copiedLink ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
 
-            <div className="flex flex-col items-center space-y-4 py-2">
-              <div className="w-48 h-48 bg-white p-2 rounded-2xl border-2 border-dashed border-teal-300 dark:border-teal-700 flex items-center justify-center shadow-xs">
-                <img
-                  src={`/qr/${selectedQrClinic.id}/image?size=400`}
-                  alt="Clinic QR Code"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              <div className="w-full space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Direct Click-to-Chat Link
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`https://wa.me/${selectedQrClinic.whatsappDisplayNumber.replace(/[^0-9]/g, "")}?text=Hi`}
-                    className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono text-xs text-slate-700 dark:text-slate-300 outline-none"
-                  />
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `https://wa.me/${selectedQrClinic.whatsappDisplayNumber.replace(/[^0-9]/g, "")}?text=Hi`
-                      )
-                    }
-                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>{copiedLink ? "Copied!" : "Copy"}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="w-full pt-2 flex flex-wrap gap-2 justify-center">
+                Copy Link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs flex-1 gap-1"
+                asChild
+              >
                 <a
-                  href={`/qr/${selectedQrClinic.id}/download?format=png`}
+                  href={`http://127.0.0.1:3000/api/admin/tenants/${selectedQrClinic.id}/qr/download?format=png`}
                   download
-                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1 border border-slate-200 dark:border-slate-700 transition"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>PNG</span>
+                  <Download className="size-3.5" />
+                  Download PNG
                 </a>
-                <a
-                  href={`/qr/${selectedQrClinic.id}/download?format=svg`}
-                  download
-                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1 border border-slate-200 dark:border-slate-700 transition"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>SVG</span>
-                </a>
-                <a
-                  href={`/qr/${selectedQrClinic.id}/poster`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition shadow-xs"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Standee</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
-    </div>
+    </DashboardShell>
   );
 }
