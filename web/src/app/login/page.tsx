@@ -6,10 +6,12 @@ import { useAppDispatch } from "@/store/hooks";
 import { login } from "@/store/authSlice";
 import { authService } from "@/lib/auth-service";
 import { ApiError } from "@/lib/api";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -29,6 +31,7 @@ export default function LoginPage() {
       const res = await authService.login(email, password);
       dispatch(login({ userData: res.user }));
 
+      // Automatically route by role without exposing any role selection in the UI
       if (res.user.role === "super_admin") {
         router.push("/super-admin");
       } else {
@@ -38,7 +41,7 @@ export default function LoginPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Invalid email or password. Please try again.");
+        setError("Invalid email or password. Please check your credentials.");
       }
     } finally {
       setLoading(false);
@@ -46,39 +49,49 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-1 items-center justify-center p-6 md:p-10 bg-background">
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-6 md:p-10 bg-background text-foreground">
+      {/* Top right theme toggle matching AbleSpace */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
       <div className="flex w-full max-w-sm flex-col gap-6">
         {/* Brand Header */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg shadow-xs">
             C
           </div>
-          <h1 className="text-xl font-bold tracking-tight">ClinicConnect</h1>
-          <p className="text-xs text-muted-foreground">
-            WhatsApp Healthcare &amp; OPD Platform
-          </p>
+          <div className="space-y-0.5">
+            <h1 className="text-xl font-bold tracking-tight">ClinicConnect</h1>
+            <p className="text-xs text-muted-foreground">
+              Healthcare &amp; Clinic Management Platform
+            </p>
+          </div>
         </div>
 
-        {/* Login Card matching AbleSpace */}
+        {/* Authentication Card matching AbleSpace */}
         <Card className="shadow-none border-border">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-lg font-semibold leading-none">
+            <CardTitle className="text-base font-semibold leading-none">
               Sign in to your account
             </CardTitle>
-            <CardDescription className="text-xs mt-1">
-              Enter your credentials to manage your clinic
+            <CardDescription className="text-xs mt-1.5">
+              Enter your email and password to access your dashboard
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="grid gap-3.5">
               <div className="grid gap-1.5">
-                <Label htmlFor="email" className="text-xs">Email</Label>
+                <Label htmlFor="email" className="text-xs font-medium">
+                  Email Address
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   required
                   autoComplete="email"
-                  placeholder="admin@clinic.com"
+                  placeholder="name@clinic.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-8 text-xs"
@@ -86,7 +99,11 @@ export default function LoginPage() {
               </div>
 
               <div className="grid gap-1.5">
-                <Label htmlFor="password" className="text-xs">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-xs font-medium">
+                    Password
+                  </Label>
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -100,7 +117,7 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="rounded-md border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive">
+                <div className="rounded-md border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive">
                   {error}
                 </div>
               )}
@@ -109,7 +126,7 @@ export default function LoginPage() {
                 type="submit"
                 size="sm"
                 disabled={loading}
-                className="w-full text-xs font-medium h-8 mt-1"
+                className="w-full text-xs font-medium h-8 mt-1 cursor-pointer"
               >
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
@@ -117,18 +134,10 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Credentials hints for local testing */}
-        <div className="rounded-lg border border-dashed border-border p-3 bg-muted/20 text-center">
-          <p className="text-[11px] font-medium text-foreground">Demo Credentials:</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Super Admin: <code className="font-mono">superadmin@clinicconnect.com</code>
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            Clinic Admin: <code className="font-mono">admin@sunriseclinic.com</code>
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            Password: <code className="font-mono">Password@123</code>
-          </p>
+        {/* Reassuring Security Footer */}
+        <div className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <ShieldCheck className="size-3.5" />
+          <span>Encrypted healthcare communications &amp; OPD system</span>
         </div>
       </div>
     </div>
