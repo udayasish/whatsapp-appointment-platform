@@ -4,9 +4,10 @@ import {
   sendInteractiveListMessage,
   sendTextMessage,
 } from "../whatsapp/services/index.js";
+import { env } from "../../lib/index.js";
 import type { ConversationStep } from "../../lib/db/index.js";
 import {
-  getOrCreateConversationState,
+  getActiveConversationState,
   getOrCreatePatient,
   resetConversationState,
   updateConversationState,
@@ -98,7 +99,11 @@ export async function handleBookingMessage(ctx: InboundMessageContext): Promise<
 
   const body = ctx.body.trim();
   const patient = await getOrCreatePatient(ctx.tenant.id, ctx.phoneNumber, ctx.user);
-  const state = await getOrCreateConversationState(ctx.tenant.id, ctx.phoneNumber);
+  const { state } = await getActiveConversationState(
+    ctx.tenant.id,
+    ctx.phoneNumber,
+    env.CONVERSATION_SESSION_TIMEOUT_MINUTES
+  );
   const tempData = (state.tempData ?? {}) as BookingTempData;
   const lang: Lang = tempData.lang ?? "en";
 

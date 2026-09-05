@@ -10,7 +10,7 @@ export interface CreateAppointmentParams {
   appointmentTime: string;
   patientName: string;
   patientAge: number;
-  complaint: string;
+  complaint?: string | null;
 }
 
 /**
@@ -69,7 +69,7 @@ export async function createAppointmentFromBooking(
         appointmentTime: params.appointmentTime,
         patientName: params.patientName,
         patientAge: params.patientAge,
-        complaint: params.complaint,
+        complaint: params.complaint ?? null,
       })
       .returning();
 

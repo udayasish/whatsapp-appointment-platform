@@ -28,7 +28,7 @@ export async function handleConfirmBooking(ctx: StepContext): Promise<StepResult
     appointmentTime: tempData.slotStartTime!,
     patientName: tempData.patientName!,
     patientAge: tempData.patientAge!,
-    complaint: tempData.complaint!,
+    complaint: tempData.complaint ?? null,
   });
 
   if (!appointment) {

@@ -126,10 +126,10 @@ export async function handleGoBack(
     }
 
     case "confirm_booking": {
-      const reply = t(lang, "enterComplaintPrompt");
+      const reply = t(lang, "enterAgePrompt");
       return {
-        nextStep: "enter_complaint",
-        tempData: { ...tempData, complaint: undefined, lastPrompt: reply },
+        nextStep: "enter_age",
+        tempData: { ...tempData, patientAge: undefined, lastPrompt: reply },
         reply,
       };
     }

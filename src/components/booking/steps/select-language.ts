@@ -3,10 +3,18 @@ import type { Lang, StepContext, StepResult } from "../types.js";
 import { actionButtons, invalidReply, languageButtons } from "./shared.js";
 
 export async function handleSelectLanguage(ctx: StepContext): Promise<StepResult> {
-  const choice = ctx.body.trim();
+  const choice = ctx.body.trim().toLowerCase();
   let lang: Lang | null = null;
-  if (choice === "1") lang = "en";
-  else if (choice === "2") lang = "as";
+  if (choice === "1" || choice === "en" || choice === "english") {
+    lang = "en";
+  } else if (
+    choice === "2" ||
+    choice === "as" ||
+    choice === "assamese" ||
+    choice.includes("অসমীয়া")
+  ) {
+    lang = "as";
+  }
 
   if (!lang) {
     return {

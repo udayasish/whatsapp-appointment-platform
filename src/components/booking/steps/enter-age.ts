@@ -1,6 +1,5 @@
-import { t } from "../messages.js";
 import type { StepContext, StepResult } from "../types.js";
-import { invalidReply } from "./shared.js";
+import { buildConfirmSummary, confirmButtons, invalidReply } from "./shared.js";
 
 export async function handleEnterAge(ctx: StepContext): Promise<StepResult> {
   const { lang, tempData, body } = ctx;
@@ -14,10 +13,13 @@ export async function handleEnterAge(ctx: StepContext): Promise<StepResult> {
     };
   }
 
-  const reply = t(lang, "enterComplaintPrompt");
+  const nextTempData = { ...tempData, patientAge: age };
+  const summary = buildConfirmSummary(lang, nextTempData);
+
   return {
-    nextStep: "enter_complaint",
-    tempData: { ...tempData, patientAge: age, lastPrompt: reply },
-    reply,
+    nextStep: "confirm_booking",
+    tempData: { ...nextTempData, lastPrompt: summary },
+    reply: summary,
+    buttons: confirmButtons(lang),
   };
 }

@@ -6,9 +6,22 @@ import { actionButtons, buildDoctorListPrompt, invalidReply } from "./shared.js"
 
 export async function handleSelectAction(ctx: StepContext): Promise<StepResult> {
   const { lang, tempData, body, tenant, patient } = ctx;
-  const choice = body.trim();
+  const choice = body.trim().toLowerCase();
 
-  if (choice === "2") {
+  const isViewAppointments =
+    choice === "2" ||
+    choice.includes("view") ||
+    choice.includes("appointment") ||
+    choice.includes("এপইণ্টমেণ্ট") ||
+    choice.includes("চাওক");
+
+  const isBookAppointment =
+    choice === "1" ||
+    choice.includes("book") ||
+    choice.includes("বুকিং") ||
+    choice.includes("কৰক");
+
+  if (isViewAppointments) {
     const upcoming = await listUpcomingAppointmentsForPatient(patient.id);
     const reply =
       upcoming.length === 0
@@ -24,7 +37,7 @@ export async function handleSelectAction(ctx: StepContext): Promise<StepResult> 
     return { nextStep: "idle", tempData: {}, reply };
   }
 
-  if (choice === "1") {
+  if (isBookAppointment) {
     const prompt = await buildDoctorListPrompt(tenant.id, lang);
     if (!prompt) {
       return { nextStep: "idle", tempData: {}, reply: t(lang, "noDoctors") };

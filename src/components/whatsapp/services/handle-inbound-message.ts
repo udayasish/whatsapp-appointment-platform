@@ -1,4 +1,4 @@
-import { logger, withKeyLock } from "../../../lib/index.js";
+import { env, logger, withKeyLock } from "../../../lib/index.js";
 import { resolveTenantByPhoneNumberId } from "./resolve-tenant.js";
 import { resolveSenderRole } from "./resolve-role.js";
 import { logMessage } from "./log-message.js";
@@ -36,6 +36,32 @@ async function processInboundMessage(inbound: ParsedInboundMessage) {
       body: inbound.body,
       mediaUrl: inbound.mediaId,
       rawPayload: inbound.raw,
+    });
+    return;
+  }
+
+  if (tenant.status !== "active") {
+    logger.warn("Inbound WhatsApp message for inactive/suspended tenant", {
+      tenantId: tenant.id,
+      tenantName: tenant.name,
+      status: tenant.status,
+      from: inbound.from,
+    });
+    return;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const messageAgeSeconds = nowSeconds - inbound.timestamp;
+
+  if (messageAgeSeconds > env.MAX_INBOUND_MESSAGE_AGE_SECONDS) {
+    logger.warn("Dropping stale inbound WhatsApp message from delayed webhook delivery", {
+      waMessageId: inbound.waMessageId,
+      from: inbound.from,
+      phoneNumberId: inbound.phoneNumberId,
+      messageTimestamp: inbound.timestamp,
+      nowSeconds,
+      messageAgeSeconds,
+      maxAgeSeconds: env.MAX_INBOUND_MESSAGE_AGE_SECONDS,
     });
     return;
   }

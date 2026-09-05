@@ -62,6 +62,7 @@ export interface ParsedInboundMessage {
   from: string;
   waMessageId: string;
   messageType: string;
+  timestamp: number;
   body: string | null;
   mediaId: string | null;
   raw: unknown;
@@ -121,6 +122,7 @@ export function parseWebhookPayload(rawBody: unknown): {
           from: msg.from,
           waMessageId: msg.id,
           messageType: msg.type,
+          timestamp: parseInt(msg.timestamp, 10) || Math.floor(Date.now() / 1000),
           body: extractBody(msg),
           mediaId: extractMediaId(msg),
           raw: msg,

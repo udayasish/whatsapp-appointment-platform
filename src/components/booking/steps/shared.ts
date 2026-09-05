@@ -122,14 +122,18 @@ export function slotRowsFromTempData(tempData: BookingTempData): ListRow[] {
 }
 
 export function buildConfirmSummary(lang: Lang, tempData: BookingTempData): string {
-  return (
+  let summary =
     t(lang, "confirmHeader") +
     `\n\n👨‍⚕️ Doctor: *${tempData.doctorName}*` +
     `\n📅 Date: *${formatDateLong(tempData.date!)}*` +
     `\n⏰ Time: *${formatTime12h(tempData.slotStartTime!)}*` +
-    `\n🧑 Patient: *${tempData.patientName}* (Age ${tempData.patientAge})` +
-    `\n📝 Reason: ${tempData.complaint}`
-  );
+    `\n🧑 Patient: *${tempData.patientName}* (Age ${tempData.patientAge})`;
+
+  if (tempData.complaint) {
+    summary += `\n📝 Reason: ${tempData.complaint}`;
+  }
+
+  return summary;
 }
 
 export function invalidReply(lang: Lang, tempData: BookingTempData): string {

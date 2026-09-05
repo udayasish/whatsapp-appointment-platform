@@ -31,7 +31,7 @@ export interface Appointment {
   patientAge: number;
   patientPhone: string;
   timeSlot: string;
-  complaint: string;
+  complaint?: string | null;
   status: "booked" | "completed" | "noshow" | "cancelled";
 }
 

@@ -26,6 +26,11 @@ const envSchema = z.object({
     .default("clinicconnect-access-token-secret-dev-32chars"),
   // How long the admin JWT stays valid. e.g. "7d", "24h"
   ACCESS_TOKEN_EXPIRATION: z.string().default("7d"),
+  // --- Bot Conversation Session & Webhook Guard ---
+  // Inactivity window before an in-progress booking flow expires back to idle
+  CONVERSATION_SESSION_TIMEOUT_MINUTES: z.coerce.number().int().positive().default(15),
+  // Maximum age (in seconds) of an incoming webhook message before discarding as stale retry
+  MAX_INBOUND_MESSAGE_AGE_SECONDS: z.coerce.number().int().positive().default(300),
 });
 
 const parsed = envSchema.safeParse(process.env);

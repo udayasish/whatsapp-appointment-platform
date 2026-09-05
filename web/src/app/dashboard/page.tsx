@@ -341,7 +341,7 @@ export default function ClinicDashboardPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground truncate max-w-xs">
-                        {patient.complaint}
+                        {patient.complaint || "General Consultation"}
                       </TableCell>
                       <TableCell>
                         {isDone ? (

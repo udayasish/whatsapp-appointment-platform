@@ -43,7 +43,7 @@ export async function updateConversationState(
 ): Promise<void> {
   await db
     .update(conversationState)
-    .set({ currentStep, tempData })
+    .set({ currentStep, tempData, updatedAt: new Date() })
     .where(eq(conversationState.id, id));
 }
 
