@@ -14,14 +14,21 @@ export const requireAdminAuth = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const cookieHeader = req.headers.cookie ?? "";
   let token: string | undefined;
 
-  for (const chunk of cookieHeader.split(";")) {
-    const part = chunk.trim();
-    if (part.startsWith("admin_token=")) {
-      token = part.slice("admin_token=".length);
-      break;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.slice(7).trim();
+  }
+
+  if (!token) {
+    const cookieHeader = req.headers.cookie ?? "";
+    for (const chunk of cookieHeader.split(";")) {
+      const part = chunk.trim();
+      if (part.startsWith("admin_token=")) {
+        token = part.slice("admin_token=".length);
+        break;
+      }
     }
   }
 

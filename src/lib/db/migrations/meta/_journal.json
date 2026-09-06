@@ -15,6 +15,13 @@
       "when": 1786006557820,
       "tag": "0001_acoustic_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788702369896,
+      "tag": "0002_useful_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }

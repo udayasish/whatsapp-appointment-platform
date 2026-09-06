@@ -53,6 +53,7 @@ adminRouter.post("/auth/login", loginRateLimit, async (req, res) => {
     res.cookie("admin_token", token, COOKIE_OPTS);
     res.json({
       ok: true,
+      token,
       user: {
         id: user.id,
         email: user.email,

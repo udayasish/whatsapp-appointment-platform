@@ -14,8 +14,12 @@ app.use(express.static("public"));
 app.use(
   cors({
     origin: (origin, cb) => {
-      // In development allow any localhost origin; in production lock this down
-      if (!origin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      // In development allow localhost, Android emulator (10.0.2.2), and LAN IP origins
+      if (
+        !origin ||
+        process.env.NODE_ENV !== "production" ||
+        /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin)
+      ) {
         cb(null, true);
       } else {
         cb(null, false);
