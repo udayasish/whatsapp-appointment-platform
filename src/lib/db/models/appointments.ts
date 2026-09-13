@@ -54,6 +54,7 @@ export const appointments = pgTable(
     index("appointments_tenant_id_idx").on(t.tenantId),
     index("appointments_appointment_date_idx").on(t.appointmentDate),
     index("appointments_status_idx").on(t.status),
+    index("appointments_slot_id_status_idx").on(t.slotId, t.status),
   ]
 );
 

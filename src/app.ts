@@ -4,6 +4,8 @@ import cookieParser from "cookie-parser";
 import { errorHandler, notFoundHandler } from "./middlewares/index.js";
 import { whatsappRouter } from "./components/whatsapp/routes.js";
 import { adminRouter } from "./components/admin/index.js";
+import { appointmentsRouter } from "./components/appointments/index.js";
+import { doctorsRouter } from "./components/doctors/index.js";
 import { qrRouter } from "./components/qr/index.js";
 
 export const app = express();
@@ -45,6 +47,8 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/admin", adminRouter);
+app.use("/api/appointments", appointmentsRouter);
+app.use("/api/doctors", doctorsRouter);
 app.use("/qr", qrRouter);
 app.use(whatsappRouter);
 

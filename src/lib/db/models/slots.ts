@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   date,
   index,
+  integer,
   pgTable,
   time,
   unique,
@@ -29,6 +30,7 @@ export const slots = pgTable(
     startTime: time("start_time").notNull(),
     endTime: time("end_time").notNull(),
     status: slotStatusEnum("status").notNull().default("available"),
+    maxPatients: integer("max_patients").notNull().default(30),
   },
   (t) => [
     unique("slots_doctor_date_start_unique").on(

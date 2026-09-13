@@ -104,3 +104,16 @@ qrRouter.get("/:tenantId/download", async (req, res) => {
   res.setHeader("Content-Type", "image/png");
   res.send(pngBuffer);
 });
+
+/**
+ * GET /qr/:tenantId/info
+ * Returns JSON metadata for the clinic's QR code & WhatsApp link.
+ */
+qrRouter.get("/:tenantId/info", async (req, res) => {
+  const info = await getClinicQrInfo(req.params.tenantId);
+  if (!info) {
+    res.status(404).json({ error: "Clinic not found" });
+    return;
+  }
+  res.json(info);
+});

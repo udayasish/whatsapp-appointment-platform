@@ -33,6 +33,7 @@ export interface GenerateSlotsParams {
   endTime: string;
   durationMinutes: number;
   horizonDays: number;
+  maxPatients?: number;
 }
 
 /**
@@ -50,6 +51,7 @@ export async function generateSlots(params: GenerateSlotsParams) {
     endTime,
     durationMinutes,
     horizonDays,
+    maxPatients = 30,
   } = params;
   const weekdaySet = new Set(weekdays);
   const rows: (typeof slots.$inferInsert)[] = [];
@@ -66,7 +68,15 @@ export async function generateSlots(params: GenerateSlotsParams) {
     while (cursor < endTime) {
       const slotEnd = addMinutes(cursor, durationMinutes);
       if (slotEnd > endTime) break; // never create a partial trailing slot
-      rows.push({ tenantId, doctorId, slotDate, dayOfWeek, startTime: cursor, endTime: slotEnd });
+      rows.push({
+        tenantId,
+        doctorId,
+        slotDate,
+        dayOfWeek,
+        startTime: cursor,
+        endTime: slotEnd,
+        maxPatients,
+      });
       cursor = slotEnd;
     }
   }

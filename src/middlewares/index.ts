@@ -47,3 +47,5 @@ export function errorHandler(
   logger.error(err instanceof Error ? err : new Error(String(err)));
   res.status(500).json({ error: "Internal server error" });
 }
+
+export * from "./auth.js";

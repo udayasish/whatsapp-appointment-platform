@@ -14,6 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/lib/db/seed.ts",
     "slots:refresh": "tsx src/scripts/refresh-slots.ts",
+    "slots:reset": "tsx src/scripts/reset-slots.ts",
     "studio": "npx drizzle-kit studio",
     "templates:register": "tsx src/scripts/register-templates.ts"
   },

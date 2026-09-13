@@ -38,6 +38,29 @@ export async function createAppointmentFromBooking(
       return null;
     }
 
+    const [{ activeCount }] = await tx
+      .select({
+        activeCount: sql<number>`count(*)::int`,
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.slotId, params.slotId),
+          eq(appointments.status, "booked")
+        )
+      );
+
+    const currentBooked = Number(activeCount);
+    const maxPatients = slot.maxPatients ?? 30;
+
+    if (currentBooked >= maxPatients) {
+      await tx
+        .update(slots)
+        .set({ status: "booked" })
+        .where(eq(slots.id, params.slotId));
+      return null;
+    }
+
     const [{ maxToken }] = await tx
       .select({
         maxToken: sql<number>`coalesce(max(${appointments.tokenNumber}), 0)`,
@@ -52,10 +75,13 @@ export async function createAppointmentFromBooking(
 
     const tokenNumber = Number(maxToken) + 1;
 
-    await tx
-      .update(slots)
-      .set({ status: "booked" })
-      .where(eq(slots.id, params.slotId));
+    // Only mark the slot 'booked' if this new appointment reaches maximum capacity
+    if (currentBooked + 1 >= maxPatients) {
+      await tx
+        .update(slots)
+        .set({ status: "booked" })
+        .where(eq(slots.id, params.slotId));
+    }
 
     const [appointment] = await tx
       .insert(appointments)
