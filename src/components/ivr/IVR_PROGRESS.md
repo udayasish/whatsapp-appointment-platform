@@ -17,8 +17,15 @@ as WhatsApp bookings → appears in admin dashboard automatically.
 ## Architecture
 - All IVR code: src/components/ivr/
 - Routes: src/components/ivr/routes/ivr.routes.ts
-- Controllers: src/components/ivr/controllers/ivr.controller.ts
+- Controllers: src/components/ivr/controllers/ivr.controller.ts (thin HTTP layer: request validation, response dispatching, 0 DB queries)
 - Services: src/components/ivr/services/
+  - ivr-flow.service.ts: IVR state machine orchestration and navigation
+  - booking.service.ts: Appointment confirmation, DB transactions, alerts, and reminders
+  - prompts.service.ts: ExoML TTS prompt builders and date/time formatters
+  - session.service.ts: Redis session storage
+  - resolve-tenant.service.ts: Tenant phone resolution
+  - sms.service.ts: Exotel SMS notification service
+  - xml.service.ts: ExoML XML builders
 - Schemas: src/components/ivr/schemas/ivr.schema.ts
 - Session storage: Redis (existing bullConnection), key: ivr:session:{CallSid}, TTL: 600s
 - DB: Same PostgreSQL as WhatsApp system
@@ -81,22 +88,22 @@ Tasks:
 - [x] Verify appointment appears in admin dashboard after booking
 
 ### Phase 3: SMS Confirmation + Reminders
-Status: IN PROGRESS
+Status: COMPLETED
 Started: 2026-09-15
-Completed: —
+Completed: 2026-09-15
 
 Tasks:
-- [ ] Create src/components/ivr/services/sms.service.ts
-- [ ] Implement Exotel SMS API call (axios POST)
-- [ ] Integrate SMS into confirm step after successful booking
-- [ ] Integrate scheduleReminder() after booking
-- [ ] Integrate scheduleBookingAlert() after booking
-- [ ] Test SMS delivery to patient phone
-- [ ] Verify BullMQ reminder job is queued
+- [x] Create src/components/ivr/services/sms.service.ts
+- [x] Implement Exotel SMS API call (axios POST)
+- [x] Integrate SMS into confirm step after successful booking
+- [x] Integrate scheduleReminder() after booking
+- [x] Integrate scheduleBookingAlert() after booking
+- [x] Test SMS delivery to patient phone
+- [x] Verify BullMQ reminder job is queued
 
 ### Phase 4: Edge Cases + Hardening
-Status: NOT STARTED
-Started: —
+Status: IN PROGRESS
+Started: 2026-09-15
 Completed: —
 
 Tasks:
