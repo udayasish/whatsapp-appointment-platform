@@ -1,0 +1,22 @@
+meta {
+  name: Simulate Hangup
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/hangup
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  CallStatus: completed
+}
+
+docs {
+  Exotel webhook triggered when a call ends or is disconnected.
+  Cleans up any remaining Redis session for this CallSid and returns HTTP 200.
+}

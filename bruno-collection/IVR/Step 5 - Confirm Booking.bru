@@ -1,0 +1,23 @@
+meta {
+  name: Step 5 - Confirm Booking
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 1
+}
+
+docs {
+  Patient presses 1 to confirm the appointment booking.
+  Server creates the appointment record in PostgreSQL with advisory lock, cleans up the Redis session, and speaks confirmation with token number.
+}

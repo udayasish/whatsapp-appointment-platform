@@ -1,0 +1,16 @@
+meta {
+  name: Get IVR Health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/ivr/health
+  body: none
+  auth: none
+}
+
+docs {
+  Returns the health status and current phase of the IVR subsystem.
+  Response: {"status":"ok","provider":"exotel","phase":2}
+}

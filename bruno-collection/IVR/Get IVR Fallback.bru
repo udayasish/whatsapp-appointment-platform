@@ -1,0 +1,16 @@
+meta {
+  name: Get IVR Fallback
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/ivr/fallback
+  body: none
+  auth: none
+}
+
+docs {
+  Exotel fallback URL called if primary webhook endpoints fail.
+  Returns static ExoML XML with a polite apology and hangup without touching DB/Redis.
+}

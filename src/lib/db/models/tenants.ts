@@ -24,6 +24,7 @@ export const tenants = pgTable("tenants", {
   // so toggling takes effect immediately even for already-scheduled jobs.
   remindersEnabled: boolean("reminders_enabled").notNull().default(true),
   notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+  ivrPhoneNumber: varchar("ivr_phone_number", { length: 20 }).unique(),
 });
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({

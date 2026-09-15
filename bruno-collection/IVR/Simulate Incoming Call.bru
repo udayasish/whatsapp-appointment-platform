@@ -1,0 +1,24 @@
+meta {
+  name: Simulate Incoming Call
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/incoming
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  CallStatus: ringing
+  Direction: inbound
+}
+
+docs {
+  Exotel webhook triggered when a patient dials the clinic IVR number.
+  Initializes the call session in Redis and returns ExoML XML with greeting and options (1 to book, 0 to exit).
+}
