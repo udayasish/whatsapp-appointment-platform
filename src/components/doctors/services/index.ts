@@ -8,4 +8,5 @@ export * from "./block-date.js";
 export * from "./list-doctor-date-slots.js";
 export * from "./create-doctor-slot.js";
 export * from "./delete-doctor-slot.js";
+export * from "./update-doctor-slot.js";
 export * from "./copy-doctor-slots.js";

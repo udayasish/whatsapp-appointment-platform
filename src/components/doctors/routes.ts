@@ -12,6 +12,7 @@ import {
   upsertDoctorSchedule,
   listDoctorDateSlots,
   createDoctorSlot,
+  updateDoctorSlot,
   deleteDoctorSlot,
   copyDoctorSlots,
 } from "./services/index.js";
@@ -41,6 +42,12 @@ const blockDateSchema = z.object({
 const createSlotSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
   startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().optional(),
+  maxPatients: z.number().int().positive().optional(),
+});
+
+const updateSlotSchema = z.object({
+  startTime: z.string().optional(),
   endTime: z.string().optional(),
   maxPatients: z.number().int().positive().optional(),
 });
@@ -371,6 +378,53 @@ doctorsRouter.post(
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create timing";
+      res.status(400).json({ error: message });
+    }
+  }
+);
+
+/**
+ * PATCH /api/doctors/:doctorId/slots/:slotId
+ * Updates consultation timing and maxPatients capacity for a specific slot.
+ */
+doctorsRouter.patch(
+  "/:doctorId/slots/:slotId",
+  requireAdminAuth,
+  async (req, res) => {
+    const doctorId = String(req.params.doctorId);
+    const slotId = String(req.params.slotId);
+    const { doctor, error } = await resolveDoctorAndVerifyAuth(req, doctorId);
+
+    if (error || !doctor) {
+      res.status(error?.status || 404).json({ error: error?.message || "Doctor not found" });
+      return;
+    }
+
+    const parseResult = updateSlotSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: "Invalid slot update data",
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    try {
+      const updatedSlot = await updateDoctorSlot({
+        tenantId: doctor.tenantId,
+        doctorId: doctor.id,
+        slotId,
+        startTime: parseResult.data.startTime,
+        endTime: parseResult.data.endTime,
+        maxPatients: parseResult.data.maxPatients,
+      });
+
+      res.json({
+        data: updatedSlot,
+        message: "Timing updated successfully",
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update timing";
       res.status(400).json({ error: message });
     }
   }
