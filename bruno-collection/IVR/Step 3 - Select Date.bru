@@ -1,0 +1,23 @@
+meta {
+  name: Step 3 - Select Date
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 1
+}
+
+docs {
+  Patient selects date option 1.
+  Server queries available time slots for the chosen doctor and date, and responds with the Time Slot Selection menu.
+}

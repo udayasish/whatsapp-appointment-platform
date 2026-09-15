@@ -7,6 +7,7 @@ import { adminRouter } from "./components/admin/index.js";
 import { appointmentsRouter } from "./components/appointments/index.js";
 import { doctorsRouter } from "./components/doctors/index.js";
 import { qrRouter } from "./components/qr/index.js";
+import { ivrRouter } from "./components/ivr/index.js";
 
 export const app = express();
 
@@ -33,6 +34,8 @@ app.use(
 
 app.use(cookieParser());
 
+app.use(express.urlencoded({ extended: true }));
+
 app.use(
   express.json({
     // Keep the raw bytes around for X-Hub-Signature-256 verification
@@ -50,6 +53,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/doctors", doctorsRouter);
 app.use("/qr", qrRouter);
+app.use("/api/ivr", ivrRouter);
 app.use(whatsappRouter);
 
 app.use(notFoundHandler);

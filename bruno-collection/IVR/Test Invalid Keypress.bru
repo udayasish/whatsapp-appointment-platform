@@ -1,0 +1,23 @@
+meta {
+  name: Test Invalid Keypress
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 9
+}
+
+docs {
+  Simulates a patient pressing an invalid digit (e.g. 9 on the welcome menu).
+  Server increments invalidCount, returns a retry prompt, and will hang up after 3 consecutive invalid attempts.
+}
