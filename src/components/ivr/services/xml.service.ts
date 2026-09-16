@@ -1,5 +1,5 @@
 // ExoML XML builders for Exotel
-// Exotel uses: <Say>, <GetDigits>, <Hangup>, <Response>
+// Exotel uses: <Say>, <Gather>, <Hangup>, <Response>
 
 function escapeXml(text: string): string {
   return text
@@ -18,9 +18,9 @@ export function buildGather(
 ): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <GetDigits action="${actionUrl}" method="POST" numDigits="${numDigits}" timeout="${timeout}" finishOnKey="">
+  <Gather action="${escapeXml(actionUrl)}" method="POST" numDigits="${numDigits}" timeout="${timeout}">
     <Say>${escapeXml(text)}</Say>
-  </GetDigits>
+  </Gather>
   <Say>We did not receive your input. Please call back. Goodbye.</Say>
   <Hangup/>
 </Response>`;

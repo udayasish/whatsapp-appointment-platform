@@ -37,6 +37,7 @@ const envSchema = z.object({
   EXOTEL_API_KEY: z.string().optional(),
   EXOTEL_API_TOKEN: z.string().optional(),
   IVR_PHONE_NUMBER: z.string().optional(),
+  EXOTEL_IP_ALLOWLIST: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

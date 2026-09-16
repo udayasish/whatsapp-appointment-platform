@@ -11,8 +11,8 @@ export const incomingCallSchema = z.object({
 
 export const dtmfStepSchema = z.object({
   CallSid: z.string().min(1),
-  From: z.string().min(1),
-  To: z.string().min(1),
+  From: z.string().optional(),
+  To: z.string().optional(),
   Digits: z.string().optional().default(""),
 });
 

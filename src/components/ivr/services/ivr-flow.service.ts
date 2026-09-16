@@ -28,19 +28,26 @@ function getStepUrl(): string {
 async function handleInvalid(
   callSid: string,
   session: IvrSession,
-  replayPrompt: string
+  replayPrompt: string,
+  emptyInput = false
 ): Promise<string> {
   const stepUrl = getStepUrl();
   const count = (session.invalidCount ?? 0) + 1;
   if (count >= 3) {
     await deleteSession(callSid);
+    logger.info("IVR max invalid attempts reached, ending call", {
+      callSid,
+      tenantId: session.tenantId,
+      step: session.step,
+      attempts: count,
+    });
     return buildHangup("Too many invalid attempts. Please call back. Goodbye.");
   }
   await updateSession(callSid, { invalidCount: count });
-  return buildGather(
-    `Sorry, that was not a valid option. Please try again. ${replayPrompt}`,
-    stepUrl
-  );
+  const prefix = emptyInput
+    ? "We did not receive your input. Please try again."
+    : "Sorry, that was not a valid option. Please try again.";
+  return buildGather(`${prefix} ${replayPrompt}`, stepUrl);
 }
 
 /**
@@ -59,6 +66,7 @@ export async function handleIncomingCallFlow(
     logger.warn("IVR call for unknown or inactive tenant", {
       to,
       callSid,
+      status: tenant?.status,
     });
     return buildHangup(
       "Sorry, clinic not found or inactive. Please call back later. Goodbye."
@@ -88,7 +96,9 @@ export async function handleIncomingCallFlow(
   logger.info("IVR incoming call initialized", {
     callSid,
     tenantId: tenant.id,
+    clinicName: tenant.name,
     callerPhone: from,
+    availableDoctorsCount: doctors.length,
   });
 
   const stepUrl = getStepUrl();
@@ -102,10 +112,42 @@ export async function handleIncomingCallFlow(
  */
 export async function handleDtmfStepFlow(
   callSid: string,
-  digit: string
+  rawDigit: string,
+  from?: string,
+  to?: string
 ): Promise<string> {
   const stepUrl = getStepUrl();
-  const session = await getSession(callSid);
+  const digit = (rawDigit || "").trim();
+  const isBlank = digit.length === 0;
+  let session = await getSession(callSid);
+
+  if (!session && to) {
+    logger.info("IVR session missing on step, auto-initializing from call metadata", {
+      callSid,
+      from,
+      to,
+    });
+    const tenant = await resolveTenantByIvrPhone(to);
+    if (tenant && tenant.status === "active") {
+      const doctors = await listActiveDoctors(tenant.id);
+      if (doctors.length > 0) {
+        session = {
+          step: "welcome",
+          tenantId: tenant.id,
+          clinicName: tenant.name,
+          callerPhone: from || "",
+          doctors,
+          invalidCount: 0,
+        };
+        await createSession(callSid, session);
+        logger.info("IVR session auto-initialized successfully", {
+          callSid,
+          tenantId: tenant.id,
+          clinicName: tenant.name,
+        });
+      }
+    }
+  }
 
   if (!session) {
     logger.warn("IVR session not found or expired", { callSid });
@@ -114,8 +156,10 @@ export async function handleDtmfStepFlow(
 
   logger.info("IVR step processing", {
     callSid,
+    tenantId: session.tenantId,
     step: session.step,
-    digit,
+    digit: digit || "<empty>",
+    invalidCount: session.invalidCount ?? 0,
   });
 
   switch (session.step) {
@@ -126,6 +170,10 @@ export async function handleDtmfStepFlow(
           doctors = await listActiveDoctors(session.tenantId);
         }
         if (doctors.length === 0) {
+          logger.warn("IVR no doctors available on welcome transition", {
+            callSid,
+            tenantId: session.tenantId,
+          });
           return buildHangup(
             "Sorry, no doctors are available right now. Please call back later. Goodbye."
           );
@@ -138,10 +186,14 @@ export async function handleDtmfStepFlow(
         return buildGather(buildDoctorMenuPrompt(doctors), stepUrl);
       } else if (digit === "0") {
         await deleteSession(callSid);
+        logger.info("IVR caller selected exit from welcome", {
+          callSid,
+          tenantId: session.tenantId,
+        });
         return buildHangup("Thank you for calling. Goodbye.");
       } else {
         const welcomePrompt = buildWelcomePrompt(session.clinicName);
-        return handleInvalid(callSid, session, welcomePrompt);
+        return handleInvalid(callSid, session, welcomePrompt, isBlank);
       }
     }
 
@@ -157,8 +209,17 @@ export async function handleDtmfStepFlow(
         const doctor = session.doctors[index];
         const dates = await listAvailableDates(doctor.id);
         if (dates.length === 0) {
-          return buildHangup(
-            "Sorry, no appointment dates are available for this doctor. Please call back later. Goodbye."
+          logger.warn("IVR doctor has no available dates", {
+            callSid,
+            tenantId: session.tenantId,
+            doctorId: doctor.id,
+          });
+          // Graceful fallback: return to doctor selection rather than abrupt hangup
+          return buildGather(
+            `Sorry, no appointment dates are available for ${doctor.name}. Please select another doctor. ${buildDoctorMenuPrompt(
+              session.doctors
+            )}`,
+            stepUrl
           );
         }
         await updateSession(callSid, {
@@ -173,7 +234,7 @@ export async function handleDtmfStepFlow(
         const replayPrompt = session.doctors
           ? buildDoctorMenuPrompt(session.doctors)
           : "Please select a doctor.";
-        return handleInvalid(callSid, session, replayPrompt);
+        return handleInvalid(callSid, session, replayPrompt, isBlank);
       }
     }
 
@@ -197,6 +258,13 @@ export async function handleDtmfStepFlow(
           selectedDate
         );
         if (slots.length === 0) {
+          logger.warn("IVR selected date has no available slots", {
+            callSid,
+            tenantId: session.tenantId,
+            doctorId: session.selectedDoctorId,
+            selectedDate,
+          });
+          // Stay on select_date, reprompt date menu
           const datePrompt = buildDateMenuPrompt(session.dates);
           return buildGather(
             `Sorry, no slots are available on that date. ${datePrompt}`,
@@ -218,7 +286,7 @@ export async function handleDtmfStepFlow(
         const replayPrompt = session.dates
           ? buildDateMenuPrompt(session.dates)
           : "Please select a date.";
-        return handleInvalid(callSid, session, replayPrompt);
+        return handleInvalid(callSid, session, replayPrompt, isBlank);
       }
     }
 
@@ -255,7 +323,7 @@ export async function handleDtmfStepFlow(
         const replayPrompt = session.slots
           ? buildSlotMenuPrompt(session.slots)
           : "Please select a time.";
-        return handleInvalid(callSid, session, replayPrompt);
+        return handleInvalid(callSid, session, replayPrompt, isBlank);
       }
     }
 
@@ -264,15 +332,36 @@ export async function handleDtmfStepFlow(
         const bookingResult = await executeIvrBooking(session);
 
         if (!bookingResult.success) {
+          logger.warn("IVR slot race condition detected on booking", {
+            callSid,
+            tenantId: session.tenantId,
+            slotId: session.selectedSlotId,
+          });
+
           // Slot race condition: slot taken between selection and confirm
+          if (bookingResult.freshSlots && bookingResult.freshSlots.length > 0) {
+            await updateSession(callSid, {
+              step: "select_slot",
+              slots: bookingResult.freshSlots,
+              invalidCount: 0,
+            });
+            return buildGather(
+              "Sorry, that slot was just booked by someone else. Please select another slot. " +
+                buildSlotMenuPrompt(bookingResult.freshSlots),
+              stepUrl
+            );
+          }
+
+          // If no fresh slots left on that date, fall back to date selection
           await updateSession(callSid, {
-            step: "select_slot",
-            slots: bookingResult.freshSlots,
+            step: "select_date",
             invalidCount: 0,
           });
+          const datePrompt = session.dates
+            ? buildDateMenuPrompt(session.dates)
+            : "Please select another date.";
           return buildGather(
-            "Sorry, that slot was just booked by someone else. Please select another slot. " +
-              buildSlotMenuPrompt(bookingResult.freshSlots),
+            `Sorry, all slots on that date are now booked. ${datePrompt}`,
             stepUrl
           );
         }
@@ -280,6 +369,7 @@ export async function handleDtmfStepFlow(
         await deleteSession(callSid);
         logger.info("IVR appointment booked successfully", {
           callSid,
+          tenantId: session.tenantId,
           appointmentId: bookingResult.appointmentId,
           token: bookingResult.tokenNumber,
         });
@@ -295,7 +385,7 @@ export async function handleDtmfStepFlow(
           session.selectedDate!,
           session.selectedSlotTime!
         );
-        return handleInvalid(callSid, session, confirmPrompt);
+        return handleInvalid(callSid, session, confirmPrompt, isBlank);
       }
     }
 
@@ -334,5 +424,58 @@ export function getHealthStatus(): {
   provider: string;
   phase: number;
 } {
-  return { status: "ok", provider: "exotel", phase: 3 };
+  return { status: "ok", provider: "exotel", phase: 4 };
 }
+
+/**
+ * Returns dynamic prompt text formatted for Exotel Gather applet based on call session state
+ */
+export async function getDynamicPromptText(
+  callSid?: string,
+  from?: string,
+  to?: string
+): Promise<string> {
+  let session = callSid ? await getSession(callSid) : null;
+
+  if (!session && to) {
+    const tenant = await resolveTenantByIvrPhone(to);
+    if (tenant && tenant.status === "active") {
+      const doctors = await listActiveDoctors(tenant.id);
+      session = {
+        step: "welcome",
+        tenantId: tenant.id,
+        clinicName: tenant.name,
+        callerPhone: from || "",
+        doctors,
+        invalidCount: 0,
+      };
+      if (callSid) {
+        await createSession(callSid, session);
+      }
+    }
+  }
+
+  if (!session) {
+    return "Namaste! Welcome to Demo Clinic. Press 1 to book an appointment. Press 0 to exit.";
+  }
+
+  switch (session.step) {
+    case "welcome":
+      return buildWelcomePrompt(session.clinicName);
+    case "select_doctor":
+      return buildDoctorMenuPrompt(session.doctors || []);
+    case "select_date":
+      return buildDateMenuPrompt(session.dates || []);
+    case "select_slot":
+      return buildSlotMenuPrompt(session.slots || []);
+    case "confirm":
+      return buildConfirmPrompt(
+        session.selectedDoctorName || "Doctor",
+        session.selectedDate || "",
+        session.selectedSlotTime || ""
+      );
+    default:
+      return "Thank you for calling. Goodbye.";
+  }
+}
+

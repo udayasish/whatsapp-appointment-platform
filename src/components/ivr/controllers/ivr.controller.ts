@@ -3,6 +3,7 @@ import {
   handleIncomingCallFlow,
   handleDtmfStepFlow,
   handleHangupFlow,
+  getDynamicPromptText,
   getFallbackXml,
   getHealthStatus,
 } from "../services/ivr-flow.service.js";
@@ -14,16 +15,56 @@ import {
 } from "../schemas/ivr.schema.js";
 import { logger } from "../../../lib/index.js";
 
+function extractIncomingPayload(req: Request) {
+  const merged = { ...req.query, ...req.body } as Record<string, unknown>;
+  return {
+    CallSid: String(merged.CallSid || merged.callSid || merged.call_sid || "").trim(),
+    From: String(merged.From || merged.CallFrom || merged.caller || merged.from || "").trim(),
+    To: String(merged.To || merged.CallTo || merged.to || "").trim(),
+    CallStatus: merged.CallStatus ? String(merged.CallStatus) : undefined,
+    Direction: merged.Direction ? String(merged.Direction) : undefined,
+  };
+}
+
+function extractStepPayload(req: Request) {
+  const merged = { ...req.query, ...req.body } as Record<string, unknown>;
+  const rawDigits = String(merged.Digits ?? merged.digits ?? "");
+  return {
+    CallSid: String(merged.CallSid || merged.callSid || merged.call_sid || "").trim(),
+    From: merged.From || merged.CallFrom ? String(merged.From || merged.CallFrom).trim() : undefined,
+    To: merged.To || merged.CallTo ? String(merged.To || merged.CallTo).trim() : undefined,
+    Digits: rawDigits.replace(/"/g, "").trim(),
+  };
+}
+
+function extractHangupPayload(req: Request) {
+  const merged = { ...req.query, ...req.body } as Record<string, unknown>;
+  return {
+    CallSid: String(merged.CallSid || merged.callSid || merged.call_sid || "").trim(),
+    From: merged.From || merged.CallFrom ? String(merged.From || merged.CallFrom).trim() : undefined,
+    CallStatus: merged.CallStatus ? String(merged.CallStatus) : undefined,
+  };
+}
+
 export async function handleIncomingCall(
   req: Request,
   res: Response
 ): Promise<void> {
   res.set("Content-Type", "text/xml");
   try {
-    const parsed = incomingCallSchema.safeParse(req.body);
+    const rawPayload = extractIncomingPayload(req);
+    logger.info("IVR handleIncomingCall received", {
+      method: req.method,
+      query: req.query,
+      body: req.body,
+      normalized: rawPayload,
+    });
+
+    const parsed = incomingCallSchema.safeParse(rawPayload);
     if (!parsed.success) {
       logger.warn("IVR incoming call invalid payload", {
         issues: parsed.error.issues,
+        rawPayload,
       });
       res.send(
         buildHangup(
@@ -49,10 +90,19 @@ export async function handleIncomingCall(
 export async function handleStep(req: Request, res: Response): Promise<void> {
   res.set("Content-Type", "text/xml");
   try {
-    const parsed = dtmfStepSchema.safeParse(req.body);
+    const rawPayload = extractStepPayload(req);
+    logger.info("IVR handleStep received", {
+      method: req.method,
+      query: req.query,
+      body: req.body,
+      normalized: rawPayload,
+    });
+
+    const parsed = dtmfStepSchema.safeParse(rawPayload);
     if (!parsed.success) {
       logger.warn("IVR dtmfStep invalid payload", {
         issues: parsed.error.issues,
+        rawPayload,
       });
       res.send(
         buildHangup(
@@ -62,23 +112,80 @@ export async function handleStep(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { CallSid, Digits } = parsed.data;
-    const responseXml = await handleDtmfStepFlow(CallSid, Digits.trim());
-    res.send(responseXml);
+    const { CallSid, Digits, From, To } = parsed.data;
+    const responseXml = await handleDtmfStepFlow(
+      CallSid,
+      Digits.trim(),
+      From,
+      To
+    );
+    const isTerminal = !responseXml.includes("<Gather");
+    logger.info("IVR step response prepared", {
+      callSid: CallSid,
+      isTerminal,
+      statusCode: isTerminal ? 302 : 200,
+    });
+    if (isTerminal) {
+      res.status(302).send(responseXml);
+      return;
+    }
+    res.status(200).send(responseXml);
   } catch (err) {
     logger.error("IVR error in handleStep", { err });
-    res.send(
+    res.status(500).send(
       buildHangup("Sorry, something went wrong. Please call back. Goodbye.")
     );
   }
 }
 
+export async function handlePrompt(req: Request, res: Response): Promise<void> {
+  try {
+    const rawPayload = extractIncomingPayload(req);
+    logger.info("IVR handlePrompt received", {
+      method: req.method,
+      query: req.query,
+      body: req.body,
+      normalized: rawPayload,
+    });
+
+    const promptText = await getDynamicPromptText(
+      rawPayload.CallSid,
+      rawPayload.From,
+      rawPayload.To
+    );
+
+    const simplePrompt = "Hello. Press 1 for Doctor Bora.";
+    logger.info("IVR handlePrompt sending simplified JSON to Exotel Gather", {
+      callSid: rawPayload.CallSid,
+      promptText: simplePrompt,
+    });
+
+    res.set("Content-Type", "application/json");
+    res.json({
+      gather_prompt: {
+        text: simplePrompt,
+      },
+      max_input_digits: 1,
+      input_timeout: 10,
+    });
+  } catch (err) {
+    logger.error("IVR error in handlePrompt", { err });
+    res.set("Content-Type", "application/json");
+    res.json({
+      gather_prompt: {
+        text: "Please wait. Connecting your call.",
+      },
+      max_input_digits: 1,
+      input_timeout: 5,
+    });
+  }
+}
+
 export async function handleHangup(req: Request, res: Response): Promise<void> {
   try {
-    const parsed = hangupSchema.safeParse(req.body);
-    const callSid = parsed.success
-      ? parsed.data.CallSid
-      : (req.body?.CallSid as string | undefined);
+    const rawPayload = extractHangupPayload(req);
+    const parsed = hangupSchema.safeParse(rawPayload);
+    const callSid = parsed.success ? parsed.data.CallSid : rawPayload.CallSid;
     await handleHangupFlow(callSid);
   } catch (err) {
     logger.warn("IVR error in handleHangup", { err });

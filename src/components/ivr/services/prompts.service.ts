@@ -26,8 +26,9 @@ export function buildDoctorMenuPrompt(
 ): string {
   let prompt = "Please select a doctor. ";
   doctors.slice(0, 9).forEach((doc, idx) => {
+    const cleanName = doc.name.replace(/^Dr\.\s*/i, "Doctor ");
     const spec = doc.specialization ? `, ${doc.specialization}` : "";
-    prompt += `Press ${idx + 1} for ${doc.name}${spec}. `;
+    prompt += `Press ${idx + 1} for ${cleanName}${spec}. `;
   });
   prompt += "Press star to exit.";
   return prompt;

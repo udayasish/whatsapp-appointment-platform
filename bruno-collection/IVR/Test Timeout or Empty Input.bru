@@ -1,0 +1,23 @@
+meta {
+  name: Test Timeout or Empty Input
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 
+}
+
+docs {
+  Simulates a caller timing out or sending empty digits.
+  Server detects blank input, prompts the caller to try again, and increments invalid count.
+}
