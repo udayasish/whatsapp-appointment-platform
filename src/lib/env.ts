@@ -31,6 +31,13 @@ const envSchema = z.object({
   CONVERSATION_SESSION_TIMEOUT_MINUTES: z.coerce.number().int().positive().default(15),
   // Maximum age (in seconds) of an incoming webhook message before discarding as stale retry
   MAX_INBOUND_MESSAGE_AGE_SECONDS: z.coerce.number().int().positive().default(300),
+  // --- IVR (Exotel) ---
+  APP_BASE_URL: z.string().url(),
+  EXOTEL_ACCOUNT_SID: z.string().optional(),
+  EXOTEL_API_KEY: z.string().optional(),
+  EXOTEL_API_TOKEN: z.string().optional(),
+  IVR_PHONE_NUMBER: z.string().optional(),
+  EXOTEL_IP_ALLOWLIST: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

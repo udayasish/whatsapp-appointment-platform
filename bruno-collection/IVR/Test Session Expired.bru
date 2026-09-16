@@ -1,0 +1,23 @@
+meta {
+  name: Test Session Expired
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: NON_EXISTENT_OR_EXPIRED_CALL_SID
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 1
+}
+
+docs {
+  Simulates a caller sending input for an expired or non-existent session.
+  Server returns ExoML stating the session has expired and hangs up cleanly.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Step 1 - Select Book Appointment
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 1
+}
+
+docs {
+  Patient presses 1 at the Welcome menu to book an appointment.
+  Server queries active doctors and responds with the Doctor Selection menu.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Step 4 - Select Slot
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: 1
+}
+
+docs {
+  Patient selects time slot option 1.
+  Server saves the chosen slot and responds with the Confirmation prompt (1 to confirm, 2 to restart).
+}

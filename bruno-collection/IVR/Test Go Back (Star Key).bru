@@ -1,0 +1,22 @@
+meta {
+  name: Test Go Back (Star Key)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/ivr/step
+  body: form-urlencoded
+  auth: none
+}
+
+body:form-urlencoded {
+  CallSid: {{callSid}}
+  From: {{patientPhone}}
+  To: {{ivrPhoneNumber}}
+  Digits: *
+}
+
+docs {
+  Simulates pressing star (*) to return to the previous menu step.
+}
