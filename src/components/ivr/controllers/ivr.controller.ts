@@ -3,7 +3,7 @@ import {
   handleIncomingCallFlow,
   handleDtmfStepFlow,
   handleHangupFlow,
-  getDynamicPromptText,
+  getPrecomputedPromptText,
   getFallbackXml,
   getHealthStatus,
 } from "../services/ivr-flow.service.js";
@@ -148,37 +148,55 @@ export async function handlePrompt(req: Request, res: Response): Promise<void> {
       normalized: rawPayload,
     });
 
-    const promptText = await getDynamicPromptText(
+    const promptText = await getPrecomputedPromptText(
       rawPayload.CallSid,
       rawPayload.From,
       rawPayload.To
     );
 
-    const simplePrompt = "Hello. Press 1 for Doctor Bora.";
-    logger.info("IVR handlePrompt sending simplified JSON to Exotel Gather", {
+    logger.info("IVR handlePrompt sending dynamic JSON to Exotel Gather", {
       callSid: rawPayload.CallSid,
-      promptText: simplePrompt,
+      promptText,
     });
 
-    res.set("Content-Type", "application/json");
-    res.json({
+    const payload = JSON.stringify({
       gather_prompt: {
-        text: simplePrompt,
+        text: promptText,
       },
       max_input_digits: 1,
+      finish_on_key: "",
       input_timeout: 10,
     });
+
+    res.setHeader("Content-Type", "application/json");
+    res.status(200).end(payload);
   } catch (err) {
     logger.error("IVR error in handlePrompt", { err });
-    res.set("Content-Type", "application/json");
-    res.json({
+    const fallbackPayload = JSON.stringify({
       gather_prompt: {
         text: "Please wait. Connecting your call.",
       },
       max_input_digits: 1,
+      finish_on_key: "",
       input_timeout: 5,
     });
+    res.setHeader("Content-Type", "application/json");
+    res.status(200).end(fallbackPayload);
   }
+}
+
+export function handlePromptFallback(_req: Request, res: Response): void {
+  logger.warn("IVR handlePromptFallback called by Exotel");
+  const fallbackPayload = JSON.stringify({
+    gather_prompt: {
+      text: "Namaste! Welcome to Demo Clinic. Press 1 to book an appointment. Press 0 to exit.",
+    },
+    max_input_digits: 1,
+    finish_on_key: "",
+    input_timeout: 10,
+  });
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).end(fallbackPayload);
 }
 
 export async function handleHangup(req: Request, res: Response): Promise<void> {
