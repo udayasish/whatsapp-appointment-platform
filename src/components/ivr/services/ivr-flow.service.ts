@@ -1,4 +1,5 @@
 import { buildGather, buildHangup } from "./xml.service.js";
+import { bullConnection } from "../../../lib/bull/index.js";
 import {
   createSession,
   getSession,
@@ -250,12 +251,14 @@ export async function handleDtmfStepFlow(
         });
         return buildGather(doctorPrompt, stepUrl);
       } else if (digit === "0") {
-        await cleanupAllCallKeys(callSid);
+        const exitPrompt = "Thank you for calling. Goodbye.";
+        await savePrecomputedPrompt(callSid, "exit", exitPrompt);
+        await updateSession(callSid, { step: "exit", invalidCount: 0 });
         logger.info("IVR caller selected exit from welcome", {
           callSid,
           tenantId: session.tenantId,
         });
-        return buildHangup("Thank you for calling. Goodbye.");
+        return buildGather(exitPrompt, stepUrl);
       } else {
         const welcomePrompt = buildWelcomePrompt(session.clinicName);
         return handleInvalid(callSid, session, welcomePrompt, isBlank);
@@ -446,15 +449,21 @@ export async function handleDtmfStepFlow(
           );
         }
 
-        await cleanupAllCallKeys(callSid);
-        logger.info("IVR appointment booked successfully", {
+        const confirmedText = buildConfirmedPrompt(bookingResult.tokenNumber);
+        await savePrecomputedPrompt(callSid, "confirmed", confirmedText);
+        await updateSession(callSid, {
+          step: "confirmed",
+          invalidCount: 0,
+        });
+
+        logger.info("IVR appointment booked successfully, queued confirmed prompt", {
           callSid,
           tenantId: session.tenantId,
           appointmentId: bookingResult.appointmentId,
           token: bookingResult.tokenNumber,
         });
 
-        return buildHangup(buildConfirmedPrompt(bookingResult.tokenNumber));
+        return buildGather(confirmedText, stepUrl);
       } else if (digit === "2") {
         const welcomePrompt = buildWelcomePrompt(session.clinicName);
         await savePrecomputedPrompt(callSid, "welcome", welcomePrompt);
@@ -468,6 +477,12 @@ export async function handleDtmfStepFlow(
         );
         return handleInvalid(callSid, session, confirmPrompt, isBlank);
       }
+    }
+
+    case "confirmed":
+    case "exit": {
+      await cleanupAllCallKeys(callSid);
+      return buildHangup("Thank you for calling. Goodbye.");
     }
 
     default: {
@@ -543,16 +558,39 @@ export async function getPrecomputedPromptText(
             session.selectedDate || "",
             session.selectedSlotTime || ""
           );
+        case "confirmed":
+          return "Your appointment has been confirmed. Thank you for calling. Goodbye.";
+        case "exit":
+          return "Thank you for calling. Goodbye.";
       }
     }
 
-    // Edge case: Flow started directly at Gather without prior Passthru.
-    // Return instant welcome prompt (< 2ms) and asynchronously warm up data in background.
+    // Flow started directly at Gather without prior Passthru:
+    // Resolve tenant clinic name with Redis caching (< 2ms)
+    let clinicName = "Demo Clinic";
     if (to) {
+      try {
+        const cachedClinic = await bullConnection.get(`ivr:tenant_name:${to}`);
+        if (cachedClinic) {
+          clinicName = cachedClinic;
+        } else {
+          const tenant = await resolveTenantByIvrPhone(to);
+          if (tenant?.name) {
+            clinicName = tenant.name;
+            await bullConnection.setex(`ivr:tenant_name:${to}`, 86400, tenant.name);
+          }
+        }
+      } catch (err) {
+        logger.warn("IVR error resolving tenant clinic name for welcome prompt", { to, err });
+      }
+
+      // Initialize session in background
       precomputeIvrData(callSid, from || "", to).catch((err) =>
         logger.error("IVR background precompute error", { callSid, err })
       );
     }
+
+    return buildWelcomePrompt(clinicName);
   }
 
   return buildWelcomePrompt("Demo Clinic");

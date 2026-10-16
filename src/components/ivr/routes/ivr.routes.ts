@@ -9,8 +9,37 @@ import {
   handleHealth,
 } from "../controllers/ivr.controller.js";
 import { exotelIpAllowlistMiddleware } from "../middlewares/ip-allowlist.middleware.js";
+import { logger } from "../../../lib/index.js";
 
 export const ivrRouter = Router();
+
+// Detailed IVR request/response debug inspector
+ivrRouter.use((req, res, next) => {
+  const start = Date.now();
+  logger.info(`>>> [IVR DEBUG INCOMING] ${req.method} ${req.originalUrl}`, {
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip,
+    headers: req.headers,
+    query: req.query,
+    body: req.body,
+  });
+
+  res.on("finish", () => {
+    logger.info(`<<< [IVR DEBUG OUTGOING] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${Date.now() - start}ms)`, {
+      statusCode: res.statusCode,
+      responseHeaders: res.getHeaders(),
+    });
+  });
+
+  req.on("close", () => {
+    if (!res.writableEnded) {
+      logger.warn(`!!! [IVR DEBUG SOCKET CLOSED EARLY] ${req.method} ${req.originalUrl} closed by client before response ended!`);
+    }
+  });
+
+  next();
+});
 
 // Health check — no auth needed
 ivrRouter.get("/health", handleHealth);

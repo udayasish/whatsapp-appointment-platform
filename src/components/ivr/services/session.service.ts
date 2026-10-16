@@ -7,7 +7,7 @@ const PROMPT_PREFIX = "ivr:prompt:";
 export const IVR_TTL = 600; // 10 minutes
 
 export interface IvrSession {
-  step: "welcome" | "select_doctor" | "select_date" | "select_slot" | "confirm";
+  step: "welcome" | "select_doctor" | "select_date" | "select_slot" | "confirm" | "confirmed" | "exit";
   tenantId: string;
   clinicName?: string;
   callerPhone: string;
@@ -129,6 +129,8 @@ export async function cleanupAllCallKeys(callSid: string): Promise<void> {
   pipeline.del(`${PROMPT_PREFIX}${callSid}:select_date`);
   pipeline.del(`${PROMPT_PREFIX}${callSid}:select_slot`);
   pipeline.del(`${PROMPT_PREFIX}${callSid}:confirm`);
+  pipeline.del(`${PROMPT_PREFIX}${callSid}:confirmed`);
+  pipeline.del(`${PROMPT_PREFIX}${callSid}:exit`);
   await pipeline.exec();
 }
 
